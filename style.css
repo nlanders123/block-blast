@@ -1099,3 +1099,21 @@ body {
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
+
+/* Ghost preview and cell highlight for light theme */
+[data-theme="light"] .ghost-preview .ghost-cell {
+    border-color: rgba(59, 130, 246, 0.7);
+    background: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="light"] .cell.highlight {
+    background: rgba(34, 197, 94, 0.4);
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: inset 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+[data-theme="light"] .cell.invalid {
+    background: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: inset 0 0 12px rgba(239, 68, 68, 0.3);
+}

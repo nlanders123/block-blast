@@ -91,6 +91,129 @@ class SoundManager {
     }
 }
 
+/**
+ * Leaderboard Manager - Stores top 10 scores locally
+ */
+class LeaderboardManager {
+    constructor() {
+        this.storageKey = 'blockBlastLeaderboard';
+        this.maxEntries = 10;
+    }
+
+    getScores() {
+        try {
+            const data = localStorage.getItem(this.storageKey);
+            return data ? JSON.parse(data) : [];
+        } catch (e) {
+            console.warn('Could not load leaderboard');
+            return [];
+        }
+    }
+
+    addScore(score) {
+        if (score <= 0) return false;
+
+        const scores = this.getScores();
+        const entry = {
+            score: score,
+            date: new Date().toLocaleDateString(),
+            timestamp: Date.now()
+        };
+
+        scores.push(entry);
+        scores.sort((a, b) => b.score - a.score);
+
+        const trimmed = scores.slice(0, this.maxEntries);
+
+        try {
+            localStorage.setItem(this.storageKey, JSON.stringify(trimmed));
+        } catch (e) {
+            console.warn('Could not save leaderboard');
+        }
+
+        // Return rank (1-indexed), or 0 if not in top 10
+        const rank = trimmed.findIndex(s => s.timestamp === entry.timestamp);
+        return rank >= 0 ? rank + 1 : 0;
+    }
+
+    clearScores() {
+        try {
+            localStorage.removeItem(this.storageKey);
+        } catch (e) {
+            console.warn('Could not clear leaderboard');
+        }
+    }
+
+    isTopScore(score) {
+        const scores = this.getScores();
+        if (scores.length < this.maxEntries) return score > 0;
+        return score > scores[scores.length - 1].score;
+    }
+}
+
+/**
+ * Theme Manager - Light/Dark/System theme support
+ */
+class ThemeManager {
+    constructor() {
+        this.storageKey = 'blockBlastTheme';
+        this.currentTheme = 'system';
+        this.init();
+    }
+
+    init() {
+        const saved = this.getSavedTheme();
+        this.setTheme(saved || 'system');
+
+        // Listen for system theme changes
+        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+            if (this.currentTheme === 'system') {
+                this.applyTheme();
+            }
+        });
+    }
+
+    getSavedTheme() {
+        try {
+            return localStorage.getItem(this.storageKey);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    setTheme(theme) {
+        this.currentTheme = theme;
+        try {
+            localStorage.setItem(this.storageKey, theme);
+        } catch (e) {
+            console.warn('Could not save theme preference');
+        }
+        this.applyTheme();
+    }
+
+    applyTheme() {
+        let effectiveTheme = this.currentTheme;
+
+        if (effectiveTheme === 'system') {
+            effectiveTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+        }
+
+        document.documentElement.setAttribute('data-theme', effectiveTheme);
+    }
+
+    toggle() {
+        const themes = ['dark', 'light', 'system'];
+        const currentIndex = themes.indexOf(this.currentTheme);
+        const nextIndex = (currentIndex + 1) % themes.length;
+        this.setTheme(themes[nextIndex]);
+        return themes[nextIndex];
+    }
+
+    getThemeName() {
+        return this.currentTheme.charAt(0).toUpperCase() + this.currentTheme.slice(1);
+    }
+}
+
 class BlockBlast {
     constructor() {
         // Game state
@@ -130,6 +253,12 @@ class BlockBlast {
         // Sound Manager
         this.sound = new SoundManager();
 
+        // Leaderboard Manager
+        this.leaderboard = new LeaderboardManager();
+
+        // Theme Manager
+        this.theme = new ThemeManager();
+
         // Piece shapes
         this.shapes = [
             { shape: [[1]], name: '1x1' },
@@ -165,6 +294,12 @@ class BlockBlast {
         this.newHighScoreElement = document.getElementById('newHighScore');
         this.effectsContainer = document.getElementById('effectsContainer');
         this.ghostPreview = document.getElementById('ghostPreview');
+
+        // Leaderboard elements
+        this.leaderboardModal = document.getElementById('leaderboardModal');
+        this.leaderboardList = document.getElementById('leaderboardList');
+        this.themeBtn = document.getElementById('themeBtn');
+        this.themeBtnLabel = document.getElementById('themeBtnLabel');
 
         this.init();
     }
@@ -295,6 +430,33 @@ class BlockBlast {
             this.sound.play('button');
             this.newGame();
         });
+
+        // Leaderboard button
+        const leaderboardBtn = document.getElementById('leaderboardBtn');
+        if (leaderboardBtn) {
+            leaderboardBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.showLeaderboard();
+            });
+        }
+
+        // Close leaderboard button
+        const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+        if (closeLeaderboardBtn) {
+            closeLeaderboardBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.hideLeaderboard();
+            });
+        }
+
+        // Theme toggle button
+        if (this.themeBtn) {
+            this.themeBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.theme.toggle();
+                this.updateThemeButtonLabel();
+            });
+        }
     }
 
     getEventPosition(e) {
@@ -796,6 +958,9 @@ class BlockBlast {
 
         const isNewHighScore = this.checkHighScore();
 
+        // Add score to leaderboard
+        const rank = this.leaderboard.addScore(this.score);
+
         this.finalScoreElement.textContent = this.score.toLocaleString();
         this.modalHighScoreElement.textContent = this.highScore.toLocaleString();
 
@@ -808,6 +973,57 @@ class BlockBlast {
         }
 
         this.gameOverModal.classList.add('active');
+    }
+
+    showLeaderboard() {
+        if (!this.leaderboardModal || !this.leaderboardList) return;
+
+        const scores = this.leaderboard.getScores();
+        this.leaderboardList.innerHTML = '';
+
+        if (scores.length === 0) {
+            const emptyMsg = document.createElement('div');
+            emptyMsg.className = 'leaderboard-empty';
+            emptyMsg.textContent = 'No scores yet! Play a game to get on the board.';
+            this.leaderboardList.appendChild(emptyMsg);
+        } else {
+            scores.forEach((entry, index) => {
+                const row = document.createElement('div');
+                row.className = 'leaderboard-row';
+                if (index === 0) row.classList.add('top-score');
+
+                const rankEl = document.createElement('span');
+                rankEl.className = 'leaderboard-rank';
+                rankEl.textContent = index === 0 ? '🏆' : `#${index + 1}`;
+
+                const scoreEl = document.createElement('span');
+                scoreEl.className = 'leaderboard-score';
+                scoreEl.textContent = entry.score.toLocaleString();
+
+                const dateEl = document.createElement('span');
+                dateEl.className = 'leaderboard-date';
+                dateEl.textContent = entry.date;
+
+                row.appendChild(rankEl);
+                row.appendChild(scoreEl);
+                row.appendChild(dateEl);
+                this.leaderboardList.appendChild(row);
+            });
+        }
+
+        this.leaderboardModal.classList.add('active');
+    }
+
+    hideLeaderboard() {
+        if (this.leaderboardModal) {
+            this.leaderboardModal.classList.remove('active');
+        }
+    }
+
+    updateThemeButtonLabel() {
+        if (this.themeBtnLabel) {
+            this.themeBtnLabel.textContent = this.theme.getThemeName();
+        }
     }
 
     togglePause() {

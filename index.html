@@ -91,6 +91,23 @@
                 <h2 class="modal-title">Paused</h2>
                 <button class="btn-primary" id="resumeBtn">Resume</button>
                 <button class="btn-secondary" id="newGameBtn">New Game</button>
+                <button class="btn-secondary" id="leaderboardBtn">
+                    🏆 Leaderboard
+                </button>
+                <button class="btn-theme" id="themeBtn">
+                    🌓 Theme: <span id="themeBtnLabel">System</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Modal -->
+        <div class="modal-overlay" id="leaderboardModal">
+            <div class="modal-content leaderboard-modal">
+                <h2 class="modal-title">🏆 Leaderboard</h2>
+                <div class="leaderboard-list" id="leaderboardList">
+                    <!-- Scores will be populated here -->
+                </div>
+                <button class="btn-primary" id="closeLeaderboardBtn">Close</button>
             </div>
         </div>
     </div>

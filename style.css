@@ -915,3 +915,187 @@ body {
         padding-right: max(16px, env(safe-area-inset-right));
     }
 }
+
+/* =====================================================
+   LEADERBOARD STYLES
+   ===================================================== */
+.leaderboard-modal {
+    min-width: 300px;
+    max-width: 350px;
+}
+
+.leaderboard-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 20px;
+    padding: 8px 0;
+}
+
+.leaderboard-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    margin: 6px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: var(--transition-fast);
+}
+
+.leaderboard-row.top-score {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.2) 0%, rgba(251, 146, 60, 0.1) 100%);
+    border-color: rgba(251, 146, 60, 0.3);
+}
+
+.leaderboard-rank {
+    font-size: 16px;
+    font-weight: 700;
+    min-width: 40px;
+    color: var(--text-secondary);
+}
+
+.top-score .leaderboard-rank {
+    color: var(--color-orange);
+}
+
+.leaderboard-score {
+    font-size: 18px;
+    font-weight: 800;
+    flex: 1;
+    text-align: center;
+    color: var(--text-primary);
+}
+
+.leaderboard-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.leaderboard-empty {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.btn-theme {
+    display: block;
+    width: 100%;
+    padding: 12px 20px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-secondary);
+    transition: var(--transition-fast);
+    margin-top: 8px;
+}
+
+.btn-theme:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* =====================================================
+   LIGHT THEME STYLES
+   ===================================================== */
+[data-theme="light"] {
+    /* Light Color Palette */
+    --bg-primary: #F0F4F8;
+    --bg-secondary: #FFFFFF;
+    --bg-board: rgba(255, 255, 255, 0.95);
+    --bg-cell: rgba(200, 210, 230, 0.6);
+    --bg-cell-hover: rgba(180, 190, 210, 0.8);
+
+    /* Glass Effects - Light */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.15);
+
+    /* Text - Light */
+    --text-primary: #1A202C;
+    --text-secondary: rgba(26, 32, 44, 0.7);
+}
+
+[data-theme="light"] body {
+    background: var(--bg-primary);
+}
+
+[data-theme="light"] .cosmic-bg {
+    background: linear-gradient(135deg, #E2E8F0 0%, #CBD5E1 50%, #94A3B8 100%);
+}
+
+[data-theme="light"] .nebula {
+    background:
+        radial-gradient(ellipse 80% 50% at 30% 80%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 40% at 70% 20%, rgba(34, 211, 238, 0.08) 0%, transparent 50%);
+}
+
+[data-theme="light"] .stars {
+    opacity: 0.15;
+}
+
+[data-theme="light"] .board-frame {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.9) 0%, rgba(241, 245, 249, 0.95) 100%);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow:
+        0 8px 40px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .cell {
+    background: var(--bg-cell);
+    border-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .piece-tray {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(241, 245, 249, 0.95) 100%);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .btn-icon {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .modal-overlay {
+    background: rgba(241, 245, 249, 0.95);
+}
+
+[data-theme="light"] .modal-content {
+    background: linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .leaderboard-row {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .btn-secondary,
+[data-theme="light"] .btn-theme {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: var(--text-primary);
+}
+
+[data-theme="light"] .high-score {
+    background: rgba(251, 146, 60, 0.1);
+    border-color: rgba(251, 146, 60, 0.25);
+}
+
+[data-theme="light"] .score-value {
+    background: linear-gradient(180deg, #1A202C 0%, #4A5568 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}

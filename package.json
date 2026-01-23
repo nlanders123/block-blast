@@ -1,26 +1,33 @@
 {
-  "name": "block-blast",
+  "name": "line-crush",
   "version": "1.0.0",
   "description": "A colorful puzzle game with drag and drop mechanics",
   "main": "index.html",
   "scripts": {
     "start": "npx serve .",
-    "cap:init": "npx cap init BlockBlast com.blockblast.app --web-dir .",
+    "build": "mkdir -p www && cp index.html style.css game.js manifest.json service-worker.js www/ && cp -r ./*.png www/ 2>/dev/null || true",
+    "cap:init": "npx cap init BlockBlast com.blockblast.app --web-dir www",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:open:ios": "npx cap open ios",
     "cap:open:android": "npx cap open android"
   },
-  "keywords": ["game", "puzzle", "block", "blast"],
+  "keywords": [
+    "game",
+    "puzzle",
+    "block",
+    "blast"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@capacitor/core": "^5.0.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^5.0.0",
-    "@capacitor/ios": "^5.0.0",
-    "@capacitor/android": "^5.0.0"
+    "@capacitor/ios": "^5.0.0"
   }
 }

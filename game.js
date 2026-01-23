@@ -237,7 +237,7 @@ class BlockBlast {
         this.lastValidPosition = null;
 
         // Touch offset - piece appears above finger on mobile
-        this.touchOffset = 80;
+        this.touchOffset = 120;
 
         // Colors with hex values for particles
         this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green'];
@@ -502,6 +502,9 @@ class BlockBlast {
 
         // Position the clone
         this.updateDragPosition(pos.x, pos.y);
+
+        // Haptic feedback
+        if (navigator.vibrate) navigator.vibrate(15);
     }
 
     handleDragMove(e) {
@@ -582,6 +585,15 @@ class BlockBlast {
         const canPlace = this.canPlacePiece(this.draggingPiece, row, col);
 
         if (canPlace) {
+            // Haptic feedback when snapping to a new valid position
+            const isNewPos = !this.lastValidPosition ||
+                this.lastValidPosition.row !== row ||
+                this.lastValidPosition.col !== col;
+
+            if (isNewPos && navigator.vibrate) {
+                navigator.vibrate(10);
+            }
+
             this.lastValidPosition = { row, col };
             this.showGhostPreview(row, col);
         } else {
@@ -1085,4 +1097,31 @@ class BlockBlast {
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.game = new BlockBlast();
+
+    const splashScreen = document.getElementById('splashScreen');
+    const gameContainer = document.getElementById('gameContainer');
+    const tapToStart = document.querySelector('.tap-to-start');
+
+    // Resume audio context on splash click (important for mobile)
+    const startApp = () => {
+        if (window.game && window.game.sound && window.game.sound.context) {
+            window.game.sound.context.resume().catch(e => console.log('Audio resume failed', e));
+        }
+
+        splashScreen.classList.add('hidden');
+        gameContainer.style.opacity = '1';
+
+        // Remove splash after transition
+        setTimeout(() => {
+            splashScreen.style.display = 'none';
+        }, 500);
+    };
+
+    if (tapToStart) {
+        tapToStart.addEventListener('click', startApp);
+        tapToStart.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double firing
+            startApp();
+        }, { passive: false });
+    }
 });

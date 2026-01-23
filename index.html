@@ -9,8 +9,12 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#0A0E27">
-    <meta name="description" content="Block Blast - A colorful puzzle game with drag and drop mechanics">
-    <title>Block Blast</title>
+    <meta name="description" content="Line Crush - A colorful puzzle game with drag and drop mechanics">
+    <title>Line Crush</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -18,6 +22,11 @@
 </head>
 
 <body>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+    </script>
     <!-- Animated Background -->
     <div class="cosmic-bg">
         <div class="stars"></div>

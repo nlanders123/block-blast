@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0A0E27">
+    <meta name="description" content="Line Crush - A colorful puzzle game with drag and drop mechanics">
+    <title>Line Crush</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js');
+        }
+    </script>
+    <!-- Animated Background -->
+    <div class="cosmic-bg">
+        <div class="stars"></div>
+        <div class="stars stars-2"></div>
+        <div class="nebula"></div>
+        <div class="particles" id="particles"></div>
+    </div>
+
+    <!-- Game Container -->
+    <div class="game-container">
+        <!-- Header -->
+        <header class="game-header">
+            <button class="btn-icon" id="pauseBtn" aria-label="Pause">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="4" width="4" height="16" rx="1" />
+                    <rect x="14" y="4" width="4" height="16" rx="1" />
+                </svg>
+            </button>
+
+            <div class="score-display">
+                <span class="score-label">SCORE</span>
+                <span class="score-value" id="scoreValue">0</span>
+                <div class="high-score" id="highScoreDisplay">
+                    <span class="high-score-label">BEST</span>
+                    <span class="high-score-value" id="highScoreValue">0</span>
+                </div>
+            </div>
+
+            <button class="btn-icon" id="undoBtn" aria-label="Undo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12.5 8C9.85 8 7.45 9 5.6 10.6L2 7v9h9l-3.6-3.6C8.95 11.05 10.65 10.5 12.5 10.5c3.55 0 6.55 2.35 7.55 5.5l2.35-.8C21.15 11.35 17.15 8 12.5 8z" />
+                </svg>
+            </button>
+        </header>
+
+        <!-- Game Board -->
+        <div class="board-container">
+            <div class="board-glow"></div>
+            <div class="board-frame">
+                <div class="game-board" id="gameBoard"></div>
+            </div>
+        </div>
+
+        <!-- Piece Tray -->
+        <div class="piece-tray">
+            <div class="piece-slots" id="pieceSlots">
+                <div class="piece-slot" data-slot="0"></div>
+                <div class="piece-slot" data-slot="1"></div>
+                <div class="piece-slot" data-slot="2"></div>
+            </div>
+        </div>
+
+        <!-- Ghost Preview -->
+        <div class="ghost-preview" id="ghostPreview"></div>
+
+        <!-- Game Over Modal -->
+        <div class="modal-overlay" id="gameOverModal">
+            <div class="modal-content">
+                <div class="new-high-score" id="newHighScore">🏆 NEW HIGH SCORE! 🏆</div>
+                <h2 class="modal-title">Game Over!</h2>
+                <p class="modal-score">Final Score: <span id="finalScore">0</span></p>
+                <p class="modal-high-score">Best: <span id="modalHighScore">0</span></p>
+                <button class="btn-primary" id="restartBtn">Play Again</button>
+            </div>
+        </div>
+
+        <!-- Pause Modal -->
+        <div class="modal-overlay" id="pauseModal">
+            <div class="modal-content">
+                <h2 class="modal-title">Paused</h2>
+                <button class="btn-primary" id="resumeBtn">Resume</button>
+                <button class="btn-secondary" id="newGameBtn">New Game</button>
+                <button class="btn-secondary" id="leaderboardBtn">
+                    🏆 Leaderboard
+                </button>
+                <button class="btn-theme" id="themeBtn">
+                    🌓 Theme: <span id="themeBtnLabel">System</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Leaderboard Modal -->
+        <div class="modal-overlay" id="leaderboardModal">
+            <div class="modal-content leaderboard-modal">
+                <h2 class="modal-title">🏆 Leaderboard</h2>
+                <div class="leaderboard-list" id="leaderboardList">
+                    <!-- Scores will be populated here -->
+                </div>
+                <button class="btn-primary" id="closeLeaderboardBtn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Clear Effects Container -->
+    <div class="effects-container" id="effectsContainer"></div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

@@ -1165,10 +1165,112 @@ body {
 }
 
 [data-theme="light"] .cell.color-green,
-[data-theme="light"] .piece-cell.color-green {
-    background: linear-gradient(145deg, #86EFAC 0%, #22C55E 40%, #16A34A 100%);
-    box-shadow:
-        inset 0 -4px 0 rgba(0, 0, 0, 0.25),
-        inset 0 2px 0 rgba(255, 255, 255, 0.6),
-        0 4px 12px rgba(34, 197, 94, 0.4);
+/* =====================================================
+   SPLASH SCREEN STYLES
+   ===================================================== */
+.splash-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: transparent;
+    /* Uses cosmic-bg behind it */
+    transition: opacity 0.5s ease-out, visibility 0.5s;
+}
+
+.splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-content {
+    text-align: center;
+    color: white;
+    padding: 20px;
+}
+
+.splash-title {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 40px;
+    background: linear-gradient(135deg, #FFF 0%, #A5F3FC 50%, #22D3EE 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(34, 211, 238, 0.5);
+    opacity: 0;
+    transform: scale(0.8);
+    animation: titleIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.splash-loader {
+    width: 200px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin: 0 auto 30px;
+    overflow: hidden;
+    position: relative;
+    opacity: 0;
+    animation: fadeIn 0.5s ease 0.5s forwards;
+}
+
+.loader-bar {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, #A855F7, #22D3EE);
+    border-radius: 3px;
+    transform: translateX(-100%);
+    animation: loadProgress 2s ease-out 0.5s forwards;
+}
+
+.tap-to-start {
+    font-size: 20px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+    opacity: 0;
+    animation: pulseFade 1.5s infinite 2.5s;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+@keyframes titleIn {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes loadProgress {
+    to {
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulseFade {
+
+    0%,
+    100% {
+        opacity: 0.5;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
+[data-theme="light"] .splash-title {
+    text-shadow: 0 0 30px rgba(34, 211, 238, 0.8);
+}
+
+[data-theme="light"] .tap-to-start {
+    color: rgba(26, 32, 44, 0.7);
 }

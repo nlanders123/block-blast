@@ -669,16 +669,21 @@ class BlockBlast {
     showGhostPreview(row, col) {
         if (!this.ghostPreview || !this.draggingPiece) return;
 
-        const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
+        // Get target anchoring cell for exact positioning
+        const targetCell = this.getCellElement(row, col);
+        if (!targetCell) return;
+
+        const cellRect = targetCell.getBoundingClientRect();
+        const cellSize = cellRect.width;
         const shape = this.draggingPiece.shape;
+        const gap = 4; // Matches --cell-gap in CSS
 
         this.ghostPreview.innerHTML = '';
         this.ghostPreview.style.display = 'grid';
-        this.ghostPreview.style.gridTemplateColumns = `repeat(${shape[0].length}, ${cellSize - 3}px)`;
-        this.ghostPreview.style.gap = '3px';
-        this.ghostPreview.style.left = `${boardRect.left + col * cellSize + 12}px`;
-        this.ghostPreview.style.top = `${boardRect.top + row * cellSize + 12}px`;
+        this.ghostPreview.style.gridTemplateColumns = `repeat(${shape[0].length}, ${cellSize}px)`;
+        this.ghostPreview.style.gap = `${gap}px`;
+        this.ghostPreview.style.left = `${cellRect.left}px`;
+        this.ghostPreview.style.top = `${cellRect.top}px`;
         this.ghostPreview.classList.add('visible');
 
         for (let r = 0; r < shape.length; r++) {
@@ -686,12 +691,12 @@ class BlockBlast {
                 const cell = document.createElement('div');
                 if (shape[r][c] === 1) {
                     cell.className = 'ghost-cell';
-                    cell.style.width = `${cellSize - 3}px`;
-                    cell.style.height = `${cellSize - 3}px`;
+                    cell.style.width = `${cellSize}px`;
+                    cell.style.height = `${cellSize}px`;
                 } else {
                     cell.style.visibility = 'hidden';
-                    cell.style.width = `${cellSize - 3}px`;
-                    cell.style.height = `${cellSize - 3}px`;
+                    cell.style.width = `${cellSize}px`;
+                    cell.style.height = `${cellSize}px`;
                 }
                 this.ghostPreview.appendChild(cell);
             }

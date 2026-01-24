@@ -585,7 +585,7 @@ class BlockBlast {
         if (window.matchMedia('(pointer: coarse)').matches) {
             const boardRect = this.boardElement.getBoundingClientRect();
             const cellSize = boardRect.width / this.boardSize;
-            this.touchOffset = cellSize * 2.8;
+            this.touchOffset = cellSize * 4; // User requested MORE space
             offsetY = this.touchOffset;
         }
 
@@ -607,7 +607,7 @@ class BlockBlast {
         if (window.matchMedia('(pointer: coarse)').matches) {
             const boardRect = this.boardElement.getBoundingClientRect();
             const cellSize = boardRect.width / this.boardSize;
-            this.touchOffset = cellSize * 2.8;
+            this.touchOffset = cellSize * 4;
             offsetY = this.touchOffset;
         }
         const targetY = y - offsetY;
@@ -636,10 +636,14 @@ class BlockBlast {
             this.lastValidPosition = { row, col };
             this.showGhostPreview(row, col);
 
+            // Add valid class for green shadow
+            if (this.ghostPreview) this.ghostPreview.classList.add('valid');
+
             // Preview Line Clears
             this.previewLineClears(this.draggingPiece, row, col);
         } else {
             this.lastValidPosition = null;
+            if (this.ghostPreview) this.ghostPreview.classList.remove('valid');
             this.hideGhostPreview();
         }
 

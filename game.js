@@ -242,12 +242,12 @@ class BlockBlast {
         // Colors with hex values for particles
         this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green'];
         this.colorHex = {
-            purple: '#A855F7',
-            cyan: '#22D3EE',
-            orange: '#FB923C',
-            blue: '#3B82F6',
-            red: '#F87171',
-            green: '#4ADE80'
+            purple: '#a855f7',
+            cyan: '#22d3ee',
+            orange: '#f97316',
+            blue: '#3b82f6',
+            red: '#ef4444',
+            green: '#22c55e'
         };
 
         // Sound Manager

@@ -259,6 +259,9 @@ class BlockBlast {
         // Theme Manager
         this.theme = new ThemeManager();
 
+        // Level Manager (New)
+        this.levelManager = new LevelManager();
+
         // Piece shapes
         this.shapes = [
             { shape: [[1]], name: '1x1' },
@@ -445,6 +448,15 @@ class BlockBlast {
             });
         }
 
+        // Level Complete Next Button
+        const nextLevelBtn = document.getElementById('nextLevelBtn');
+        if (nextLevelBtn) {
+            nextLevelBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.loadNextLevel();
+            });
+        }
+
         // Leaderboard button
         const leaderboardBtn = document.getElementById('leaderboardBtn');
         if (leaderboardBtn) {
@@ -567,8 +579,15 @@ class BlockBlast {
         if (!clone) return;
 
         const rect = clone.getBoundingClientRect();
-        // Center the piece on the cursor/finger, offset up for touch
-        const offsetY = window.matchMedia('(pointer: coarse)').matches ? this.touchOffset : 30;
+
+        // Calculate offset dynamically based on cell size to be roughly 2.8 blocks up
+        let offsetY = 30;
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const cellSize = boardRect.width / this.boardSize;
+            this.touchOffset = cellSize * 2.8;
+            offsetY = this.touchOffset;
+        }
 
         clone.style.left = `${x}px`;
         clone.style.top = `${y - offsetY}px`;
@@ -583,8 +602,14 @@ class BlockBlast {
         const boardRect = this.boardElement.getBoundingClientRect();
         const cellSize = boardRect.width / this.boardSize;
 
-        // Account for touch offset
-        const offsetY = window.matchMedia('(pointer: coarse)').matches ? this.touchOffset : 30;
+        // Calculate offset dynamically based on cell size to be roughly 2.8 blocks up
+        let offsetY = 30;
+        if (window.matchMedia('(pointer: coarse)').matches) {
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const cellSize = boardRect.width / this.boardSize;
+            this.touchOffset = cellSize * 2.8;
+            offsetY = this.touchOffset;
+        }
         const targetY = y - offsetY;
 
         const col = Math.floor((x - boardRect.left) / cellSize);
@@ -610,6 +635,9 @@ class BlockBlast {
 
             this.lastValidPosition = { row, col };
             this.showGhostPreview(row, col);
+
+            // Preview Line Clears
+            this.previewLineClears(this.draggingPiece, row, col);
         } else {
             this.lastValidPosition = null;
             this.hideGhostPreview();
@@ -677,6 +705,9 @@ class BlockBlast {
             cell.classList.remove('highlight', 'invalid');
         });
         this.currentHighlight = [];
+
+        // Clear preview highlights
+        document.querySelectorAll('.preview-clear').forEach(el => el.classList.remove('preview-clear'));
     }
 
     getCellElement(row, col) {
@@ -872,18 +903,53 @@ class BlockBlast {
     }
 
     generateNewPieces() {
+        // Difficulty Tuning: Easier pieces in early levels or lower scores
+        // Simple heuristic: If level < 5, reduce complex shapes
+        const isEasy = this.levelManager && this.levelManager.currentLevel <= 5;
+
         for (let i = 0; i < 3; i++) {
-            const shapeData = this.shapes[Math.floor(Math.random() * this.shapes.length)];
-            const color = this.colors[Math.floor(Math.random() * this.colors.length)];
-
-            this.pieces[i] = {
-                shape: shapeData.shape,
-                name: shapeData.name,
-                color: color
-            };
+            this.pieces[i] = this.getRandomPiece(isEasy);
         }
-
         this.renderPieces();
+    }
+
+    getRandomPiece(isEasy = false) {
+        const shapes = this.getShapes(isEasy);
+        const shapeData = shapes[Math.floor(Math.random() * shapes.length)];
+        const colors = this.colors;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        return {
+            shape: shapeData.shape,
+            name: 'piece',
+            color: color
+        };
+    }
+
+    getShapes(isEasy) {
+        // Basic shapes
+        const easyShapes = [
+            { shape: [[1]], name: '1x1' },
+            { shape: [[1, 1]], name: '1x2_h' },
+            { shape: [[1], [1]], name: '1x2_v' },
+            { shape: [[1, 1], [1, 1]], name: '2x2' },
+            { shape: [[1, 1, 1]], name: '1x3_h' },
+            { shape: [[1], [1], [1]], name: '1x3_v' },
+            { shape: [[1, 1], [1, 0]], name: 'L_small' }
+        ];
+
+        const hardShapes = [
+            { shape: [[1, 1, 1, 1]], name: '1x4_h' },
+            { shape: [[1], [1], [1], [1]], name: '1x4_v' },
+            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T_up' },
+            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T_left' },
+            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L_large' },
+            { shape: [[1, 1, 0], [0, 1, 1]], name: 'Z_shape' },
+            { shape: [[1, 1, 1], [1, 1, 1]], name: '2x3' }
+        ];
+
+        if (isEasy) return [...easyShapes, ...easyShapes, ...hardShapes]; // Weigh easy shapes higher
+        return [...easyShapes, ...hardShapes];
     }
 
     renderPieces() {
@@ -919,6 +985,33 @@ class BlockBlast {
     addScore(points) {
         this.score += points;
         this.updateScore();
+        this.checkLevelProgress();
+    }
+
+    checkLevelProgress() {
+        const currentLevel = this.levelManager.getCurrentLevelData();
+        if (this.score >= currentLevel.targetScore) {
+            // Level Complete!
+            this.sound.play('newHighScore'); // Use positive sound
+            document.getElementById('levelScore').textContent = this.score;
+            this.levelCompleteModal.classList.add('active');
+        }
+    }
+
+    loadNextLevel() {
+        this.levelCompleteModal.classList.remove('active');
+        if (this.levelManager.nextLevel()) {
+            this.newGame(true); // Keep score? Or reset? Usually puzzle games reset board but keep score accumulation?
+            // Actually, "50 levels" implies clearing board. Let's clear board but maybe keep score or reset target.
+            // Let's reset board but keep total score for "Endless" feel with stages. 
+            // Wait, newGame() resets pieces.
+            // Let's just call startLevel() logic.
+        } else {
+            // All levels done? Loop or endless.
+            alert("You beat all 50 levels! Restarting at 1.");
+            this.levelManager.currentLevel = 1;
+            this.newGame();
+        }
     }
 
     updateScore() {
@@ -1090,9 +1183,9 @@ class BlockBlast {
         this.renderPieces();
     }
 
-    newGame() {
+    newGame(keepScore = false) {
         this.board = [];
-        this.score = 0;
+        if (!keepScore) this.score = 0;
         this.pieces = [null, null, null];
         this.history = [];
         this.isGameOver = false;
@@ -1101,10 +1194,27 @@ class BlockBlast {
         this.gameOverModal.classList.remove('active');
         this.pauseModal.classList.remove('active');
         this.newHighScoreElement.classList.remove('show');
+        this.levelCompleteModal.classList.remove('active');
 
         this.createBoard();
+
+        // Place Level Obstacles
+        const levelData = this.levelManager.getCurrentLevelData();
+        if (levelData && levelData.obstaclePattern) {
+            levelData.obstaclePattern.forEach(pos => {
+                if (pos.r < this.boardSize && pos.c < this.boardSize) {
+                    this.board[pos.r][pos.c] = 'grey'; // Obstacle color
+                    const cell = this.getCellElement(pos.r, pos.c);
+                    if (cell) cell.classList.add('filled', 'obstacle');
+                }
+            });
+        }
+
         this.generateNewPieces();
         this.updateScore();
+
+        // Show Level Toast/Indicator (Optional)
+        // console.log("Started Level " + levelData.id);
     }
 }
 

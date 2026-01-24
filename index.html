@@ -151,11 +151,21 @@
                 <button class="btn-primary" id="closeLeaderboardBtn">Close</button>
             </div>
         </div>
+
+        <!-- Level Complete Modal -->
+        <div class="modal-overlay" id="levelCompleteModal">
+            <div class="modal-content">
+                <h2 class="modal-title neon-pink">LEVEL<br>COMPLETE!</h2>
+                <p class="modal-score">Score: <span id="levelScore">0</span></p>
+                <button class="btn-primary" id="nextLevelBtn">Next Level ➡</button>
+            </div>
+        </div>
     </div>
 
     <!-- Line Clear Effects Container -->
     <div class="effects-container" id="effectsContainer"></div>
 
+    <script src="levels.js"></script>
     <script src="game.js"></script>
 </body>
 

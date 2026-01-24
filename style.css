@@ -1381,4 +1381,26 @@ body {
     /* Green-500 with opacity */
     border: 1px solid rgba(34, 197, 94, 0.6) !important;
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}/* Pulsing Line Clear Preview */
+.cell.preview-clear::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.5);
+    z-index: 10;
+    animation: preview-pulse 0.8s ease-in-out infinite;
+    pointer-events: none;
+    border-radius: var(--border-radius-sm);
+}
+
+@keyframes preview-pulse {
+
+    0%,
+    100% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }

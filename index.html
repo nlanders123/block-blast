@@ -83,14 +83,46 @@
         <!-- Ghost Preview -->
         <div class="ghost-preview" id="ghostPreview"></div>
 
-        <!-- Game Over Modal -->
         <div class="modal-overlay" id="gameOverModal">
-            <div class="modal-content">
-                <div class="new-high-score" id="newHighScore">🏆 NEW HIGH SCORE! 🏆</div>
-                <h2 class="modal-title">Game Over!</h2>
-                <p class="modal-score">Final Score: <span id="finalScore">0</span></p>
-                <p class="modal-high-score">Best: <span id="modalHighScore">0</span></p>
-                <button class="btn-primary" id="restartBtn">Play Again</button>
+            <div class="modal-content game-over-style">
+                <div class="new-high-score" id="newHighScore">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path
+                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                </div>
+
+                <h2 class="modal-title neon-pink">GAME<br>OVER</h2>
+
+                <div class="final-score-container">
+                    <p class="score-label-small">FINAL SCORE</p>
+                    <p class="modal-score-large" id="finalScore">0</p>
+                </div>
+
+                <div class="best-score-pill">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                        <path
+                            d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11h-14zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z" />
+                    </svg>
+                    <span>BEST: <span id="modalHighScore">0</span></span>
+                </div>
+
+                <div class="modal-buttons">
+                    <button class="btn-retry" id="restartBtn">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path
+                                d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+                        </svg>
+                        RETRY
+                    </button>
+
+                    <button class="btn-home" id="homeBtn">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+                            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                        </svg>
+                        HOME
+                    </button>
+                </div>
             </div>
         </div>
 

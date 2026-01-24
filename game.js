@@ -426,10 +426,24 @@ class BlockBlast {
             this.sound.play('button');
             this.newGame();
         });
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            this.sound.play('button');
-            this.newGame();
-        });
+
+        // Game Over Modal Buttons
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.newGame();
+            });
+        }
+
+        const homeBtn = document.getElementById('homeBtn');
+        if (homeBtn) {
+            homeBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.gameOverModal.classList.remove('active');
+                this.newGame(); // Basically reset to start
+            });
+        }
 
         // Leaderboard button
         const leaderboardBtn = document.getElementById('leaderboardBtn');

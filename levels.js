@@ -19,15 +19,69 @@ class LevelManager {
     }
 
     getPatternForLevel(level) {
-        // Return a predefined pattern of obstacles (row, col)
-        // Simple patterns for now
+        const boardSize = 8;
         const patterns = [];
+
+        // predefined patterns
         const corners = [{ r: 0, c: 0 }, { r: 0, c: 7 }, { r: 7, c: 0 }, { r: 7, c: 7 }];
         const center = [{ r: 3, c: 3 }, { r: 3, c: 4 }, { r: 4, c: 3 }, { r: 4, c: 4 }];
 
-        if (level % 5 === 0) return [...center, ...corners]; // Every 5th level is hard
-        if (level > 2) return corners; // Basic obstacles
-        return []; // First 2 levels empty
+        // 1. Cross Pattern (Plus sign in middle)
+        const cross = [
+            { r: 2, c: 3 }, { r: 2, c: 4 },
+            { r: 3, c: 2 }, { r: 3, c: 5 },
+            { r: 4, c: 2 }, { r: 4, c: 5 },
+            { r: 5, c: 3 }, { r: 5, c: 4 }
+        ];
+
+        // 2. Checkerboard (inner 4x4)
+        const checkerboard = [
+            { r: 2, c: 2 }, { r: 2, c: 4 },
+            { r: 3, c: 3 }, { r: 3, c: 5 },
+            { r: 4, c: 2 }, { r: 4, c: 4 },
+            { r: 5, c: 3 }, { r: 5, c: 5 }
+        ];
+
+        // 3. Frame (Outer ring gaps)
+        const frame = [
+            { r: 1, c: 1 }, { r: 1, c: 6 }, { r: 6, c: 1 }, { r: 6, c: 6 },
+            { r: 2, c: 2 }, { r: 2, c: 5 }, { r: 5, c: 2 }, { r: 5, c: 5 }
+        ];
+
+        // Determine pattern based on level
+        if (level <= 2) return []; // Tutorial levels
+
+        const patternType = level % 10;
+
+        switch (patternType) {
+            case 3: return corners;
+            case 4: return center;
+            case 5: return cross; // Challenge level
+            case 6: return [...corners, ...center];
+            case 7: return frame;
+            case 8: return checkerboard;
+            case 9: return this.shatterPattern(); // Random scattered
+            case 0: return [...cross, ...corners]; // Boss level (10, 20, 30...)
+            default: return corners; // Default fallback
+        }
+    }
+
+    shatterPattern() {
+        // Randomly scatter 4-8 obstacles away from center
+        const obstacles = [];
+        const count = 4 + Math.floor(Math.random() * 5);
+        const prohibited = ['3-3', '3-4', '4-3', '4-4']; // Keep center clear
+
+        for (let i = 0; i < count; i++) {
+            let r, c, key;
+            do {
+                r = Math.floor(Math.random() * 8);
+                c = Math.floor(Math.random() * 8);
+                key = `${r}-${c}`;
+            } while (prohibited.includes(key) || obstacles.some(o => o.r === r && o.c === c));
+            obstacles.push({ r, c });
+        }
+        return obstacles;
     }
 
     getLevel(id) {

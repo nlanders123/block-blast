@@ -577,10 +577,12 @@ body {
     z-index: 500;
     pointer-events: none;
     opacity: 0;
+    display: none;
     transition: opacity 0.1s ease;
 }
 
 .ghost-preview.visible {
+    display: grid;
     opacity: 0.4;
 }
 

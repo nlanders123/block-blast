@@ -706,6 +706,9 @@ class BlockBlast {
     hideGhostPreview() {
         if (this.ghostPreview) {
             this.ghostPreview.classList.remove('visible');
+            this.ghostPreview.classList.remove('valid');
+            this.ghostPreview.innerHTML = '';
+            this.ghostPreview.style.display = 'none';
         }
     }
 

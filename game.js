@@ -236,6 +236,7 @@ class BlockBlast {
         this.currentHighlight = [];
         this.lastValidPosition = null;
         this.lastDragTime = 0; // For throttling drag events
+        this.dragTimeout = null; // Auto-reset timeout
 
         // Touch offset - piece appears above finger on mobile
         this.touchOffset = 120;
@@ -551,6 +552,14 @@ class BlockBlast {
 
             // Haptic feedback
             if (navigator.vibrate) navigator.vibrate(15);
+
+            // Safety timeout: auto-reset if drag lasts more than 5 seconds
+            this.dragTimeout = setTimeout(() => {
+                if (this.isDragging) {
+                    console.warn('Drag timeout - auto-resetting');
+                    this.resetDragState();
+                }
+            }, 5000);
         } catch (error) {
             console.warn('Drag start error:', error);
             this.resetDragState();
@@ -594,6 +603,12 @@ class BlockBlast {
     }
 
     resetDragState() {
+        // Clear any pending timeout
+        if (this.dragTimeout) {
+            clearTimeout(this.dragTimeout);
+            this.dragTimeout = null;
+        }
+
         // Remove any dragging clone
         const clone = document.getElementById('dragging-piece');
         if (clone) clone.remove();

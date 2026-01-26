@@ -306,6 +306,9 @@ class BlockBlast {
         this.themeBtn = document.getElementById('themeBtn');
         this.themeBtnLabel = document.getElementById('themeBtnLabel');
 
+        // Level Complete Modal
+        this.levelCompleteModal = document.getElementById('levelCompleteModal');
+
         this.init();
     }
 
@@ -1058,22 +1061,27 @@ class BlockBlast {
     addScore(points) {
         this.score += points;
         this.updateScore();
-        // Levels disabled for debugging
-        // this.checkLevelProgress();
+        // Check level progression
+        this.checkLevelProgress();
     }
 
     checkLevelProgress() {
+        if (!this.levelCompleteModal) return; // Guard against missing element
+
         const currentLevel = this.levelManager.getCurrentLevelData();
         if (this.score >= currentLevel.targetScore) {
             // Level Complete!
             this.sound.play('newHighScore'); // Use positive sound
-            document.getElementById('levelScore').textContent = this.score;
+            const levelScoreEl = document.getElementById('levelScore');
+            if (levelScoreEl) levelScoreEl.textContent = this.score;
             this.levelCompleteModal.classList.add('active');
         }
     }
 
     loadNextLevel() {
-        this.levelCompleteModal.classList.remove('active');
+        if (this.levelCompleteModal) {
+            this.levelCompleteModal.classList.remove('active');
+        }
         if (this.levelManager.nextLevel()) {
             this.newGame(true); // Keep score? Or reset? Usually puzzle games reset board but keep score accumulation?
             // Actually, "50 levels" implies clearing board. Let's clear board but maybe keep score or reset target.
@@ -1268,21 +1276,28 @@ class BlockBlast {
         this.gameOverModal.classList.remove('active');
         this.pauseModal.classList.remove('active');
         this.newHighScoreElement.classList.remove('show');
-        this.levelCompleteModal.classList.remove('active');
+        if (this.levelCompleteModal) {
+            this.levelCompleteModal.classList.remove('active');
+        }
+
+        // Clear any orphaned particle effects
+        if (this.effectsContainer) {
+            this.effectsContainer.innerHTML = '';
+        }
 
         this.createBoard();
 
-        // Levels disabled for debugging - no obstacles placed
-        // const levelData = this.levelManager.getCurrentLevelData();
-        // if (levelData && levelData.obstaclePattern) {
-        //     levelData.obstaclePattern.forEach(pos => {
-        //         if (pos.r < this.boardSize && pos.c < this.boardSize) {
-        //             this.board[pos.r][pos.c] = 'grey'; // Obstacle color
-        //             const cell = this.getCellElement(pos.r, pos.c);
-        //             if (cell) cell.classList.add('filled', 'obstacle');
-        //         }
-        //     });
-        // }
+        // Place obstacles from level data
+        const levelData = this.levelManager.getCurrentLevelData();
+        if (levelData && levelData.obstaclePattern) {
+            levelData.obstaclePattern.forEach(pos => {
+                if (pos.r < this.boardSize && pos.c < this.boardSize) {
+                    this.board[pos.r][pos.c] = 'grey'; // Obstacle color
+                    const cell = this.getCellElement(pos.r, pos.c);
+                    if (cell) cell.classList.add('filled', 'obstacle');
+                }
+            });
+        }
 
         this.generateNewPieces();
         this.updateScore();
@@ -1300,26 +1315,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const gameContainer = document.getElementById('gameContainer');
     const tapToStart = document.querySelector('.tap-to-start');
 
-    // Resume audio context on splash click (important for mobile)
-    const startApp = () => {
-        if (window.game && window.game.sound && window.game.sound.context) {
-            window.game.sound.context.resume().catch(e => console.log('Audio resume failed', e));
-        }
+    // Only run splash logic if elements exist
+    if (splashScreen && gameContainer && tapToStart) {
+        // Resume audio context on splash click (important for mobile)
+        const startApp = () => {
+            if (window.game && window.game.sound && window.game.sound.audioContext) {
+                window.game.sound.audioContext.resume().catch(e => console.log('Audio resume failed', e));
+            }
 
-        splashScreen.classList.add('hidden');
-        gameContainer.style.opacity = '1';
+            splashScreen.classList.add('hidden');
+            gameContainer.style.opacity = '1';
 
-        // Remove splash after transition
-        setTimeout(() => {
-            splashScreen.style.display = 'none';
-        }, 500);
-    };
+            // Remove splash after transition
+            setTimeout(() => {
+                splashScreen.style.display = 'none';
+            }, 500);
+        };
 
-    if (tapToStart) {
         tapToStart.addEventListener('click', startApp);
         tapToStart.addEventListener('touchstart', (e) => {
             e.preventDefault(); // Prevent double firing
             startApp();
         }, { passive: false });
     }
+    // If no splash screen, game starts immediately (current behavior)
 });

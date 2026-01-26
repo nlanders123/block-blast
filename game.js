@@ -235,6 +235,7 @@ class BlockBlast {
         this.dragStartPos = { x: 0, y: 0 };
         this.currentHighlight = [];
         this.lastValidPosition = null;
+        this.lastDragTime = 0; // For throttling drag events
 
         // Touch offset - piece appears above finger on mobile
         this.touchOffset = 120;
@@ -538,6 +539,11 @@ class BlockBlast {
 
         e.preventDefault();
 
+        // Throttle to ~60fps to prevent lag
+        const now = Date.now();
+        if (now - this.lastDragTime < 16) return;
+        this.lastDragTime = now;
+
         const pos = this.getEventPosition(e);
         this.updateDragPosition(pos.x, pos.y);
         this.updateHighlight(pos.x, pos.y);
@@ -578,20 +584,16 @@ class BlockBlast {
         const clone = document.getElementById('dragging-piece');
         if (!clone) return;
 
-        const rect = clone.getBoundingClientRect();
+        // Fixed offset: 3 cell sizes above finger for mobile, less for desktop
+        const boardRect = this.boardElement.getBoundingClientRect();
+        const cellSize = boardRect.width / this.boardSize;
+        const isMobile = window.matchMedia('(pointer: coarse)').matches;
+        const offsetY = isMobile ? cellSize * 3 : 30;
 
-        // Calculate offset dynamically based on cell size to be roughly 2.8 blocks up
-        let offsetY = 30;
-        if (window.matchMedia('(pointer: coarse)').matches) {
-            const boardRect = this.boardElement.getBoundingClientRect();
-            const cellSize = boardRect.width / this.boardSize;
-            this.touchOffset = cellSize * 4; // User requested MORE space
-            offsetY = this.touchOffset;
-        }
-
+        // Position piece centered horizontally, offset vertically
         clone.style.left = `${x}px`;
         clone.style.top = `${y - offsetY}px`;
-        clone.style.transform = 'translate(-50%, -50%) scale(1.15)';
+        clone.style.transform = 'translate(-50%, -50%) scale(1.1)';
     }
 
     updateHighlight(x, y) {
@@ -602,20 +604,31 @@ class BlockBlast {
         const boardRect = this.boardElement.getBoundingClientRect();
         const cellSize = boardRect.width / this.boardSize;
 
-        // Calculate offset dynamically based on cell size to be roughly 2.8 blocks up
-        let offsetY = 30;
-        if (window.matchMedia('(pointer: coarse)').matches) {
-            const boardRect = this.boardElement.getBoundingClientRect();
-            const cellSize = boardRect.width / this.boardSize;
-            this.touchOffset = cellSize * 4;
-            offsetY = this.touchOffset;
-        }
+        // Use same offset as updateDragPosition for consistency
+        const isMobile = window.matchMedia('(pointer: coarse)').matches;
+        const offsetY = isMobile ? cellSize * 3 : 30;
+
+        // Calculate the center point of where the piece would be placed
         const targetY = y - offsetY;
+        const targetX = x;
 
-        const col = Math.floor((x - boardRect.left) / cellSize);
-        const row = Math.floor((targetY - boardRect.top) / cellSize);
+        // Calculate grid position based on piece center
+        // Offset by half the piece size to get top-left corner
+        const shape = this.draggingPiece.shape;
+        const pieceWidthCells = shape[0].length;
+        const pieceHeightCells = shape.length;
 
-        if (row < 0 || col < 0 || row >= this.boardSize || col >= this.boardSize) {
+        // Calculate which cell the center of the piece is over
+        const centerCol = (targetX - boardRect.left) / cellSize;
+        const centerRow = (targetY - boardRect.top) / cellSize;
+
+        // Convert to top-left cell of piece
+        const col = Math.round(centerCol - pieceWidthCells / 2);
+        const row = Math.round(centerRow - pieceHeightCells / 2);
+
+        // Check if completely outside board
+        if (row + pieceHeightCells <= 0 || col + pieceWidthCells <= 0 ||
+            row >= this.boardSize || col >= this.boardSize) {
             this.hideGhostPreview();
             this.lastValidPosition = null;
             return;
@@ -638,9 +651,6 @@ class BlockBlast {
 
             // Add valid class for green shadow
             if (this.ghostPreview) this.ghostPreview.classList.add('valid');
-
-            // Preview Line Clears
-            this.previewLineClears(this.draggingPiece, row, col);
         } else {
             this.lastValidPosition = null;
             if (this.ghostPreview) this.ghostPreview.classList.remove('valid');
@@ -648,7 +658,6 @@ class BlockBlast {
         }
 
         // Highlight cells on the board
-        const shape = this.draggingPiece.shape;
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] === 1) {
@@ -658,8 +667,10 @@ class BlockBlast {
                     if (cellRow >= 0 && cellRow < this.boardSize &&
                         cellCol >= 0 && cellCol < this.boardSize) {
                         const cell = this.getCellElement(cellRow, cellCol);
-                        cell.classList.add(canPlace ? 'highlight' : 'invalid');
-                        this.currentHighlight.push(cell);
+                        if (cell) {
+                            cell.classList.add(canPlace ? 'highlight' : 'invalid');
+                            this.currentHighlight.push(cell);
+                        }
                     }
                 }
             }

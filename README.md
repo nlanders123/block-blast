@@ -1,4 +1,6 @@
-# Block Blast - Project Notes
+# Block Blast
+
+> ⚠️ **IMPORTANT**: Keep this README up to date before starting new chat sessions. This file provides context for future AI assistant sessions.
 
 ## Current State
 - **Status**: Playable, some stability issues being investigated

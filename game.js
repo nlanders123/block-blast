@@ -410,6 +410,18 @@ class BlockBlast {
         document.addEventListener('touchend', this.handleDragEnd.bind(this));
         document.addEventListener('touchcancel', this.handleDragEnd.bind(this));
 
+        // Reset drag state if user switches tabs or loses focus
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.isDragging) {
+                this.resetDragState();
+            }
+        });
+        window.addEventListener('blur', () => {
+            if (this.isDragging) {
+                this.resetDragState();
+            }
+        });
+
         // Prevent context menu on long press
         this.pieceSlotsElement.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -499,39 +511,50 @@ class BlockBlast {
     handleDragStart(e) {
         if (this.isPaused || this.isGameOver) return;
 
-        const pos = this.getEventPosition(e);
-        const target = document.elementFromPoint(pos.x, pos.y);
-        const pieceElement = target?.closest('.piece');
+        // Safety: Reset any stuck drag state first
+        if (this.isDragging) {
+            this.resetDragState();
+        }
 
-        if (!pieceElement) return;
+        try {
+            const pos = this.getEventPosition(e);
+            const target = document.elementFromPoint(pos.x, pos.y);
+            const pieceElement = target?.closest('.piece');
 
-        e.preventDefault();
+            if (!pieceElement) return;
 
-        const slotElement = pieceElement.closest('.piece-slot');
-        const slotIndex = parseInt(slotElement.dataset.slot);
+            e.preventDefault();
 
-        if (!this.pieces[slotIndex]) return;
+            const slotElement = pieceElement.closest('.piece-slot');
+            if (!slotElement || !slotElement.dataset.slot) return;
 
-        this.isDragging = true;
-        this.draggingPiece = this.pieces[slotIndex];
-        this.draggingPieceElement = pieceElement;
-        this.draggingSlotIndex = slotIndex;
-        this.dragStartPos = pos;
+            const slotIndex = parseInt(slotElement.dataset.slot);
+            if (isNaN(slotIndex) || !this.pieces[slotIndex]) return;
 
-        // Clone the piece for dragging
-        const clone = pieceElement.cloneNode(true);
-        clone.classList.add('dragging');
-        clone.id = 'dragging-piece';
-        document.body.appendChild(clone);
+            this.isDragging = true;
+            this.draggingPiece = this.pieces[slotIndex];
+            this.draggingPieceElement = pieceElement;
+            this.draggingSlotIndex = slotIndex;
+            this.dragStartPos = pos;
 
-        // Fade original
-        pieceElement.classList.add('faded');
+            // Clone the piece for dragging
+            const clone = pieceElement.cloneNode(true);
+            clone.classList.add('dragging');
+            clone.id = 'dragging-piece';
+            document.body.appendChild(clone);
 
-        // Position the clone
-        this.updateDragPosition(pos.x, pos.y);
+            // Fade original
+            pieceElement.classList.add('faded');
 
-        // Haptic feedback
-        if (navigator.vibrate) navigator.vibrate(15);
+            // Position the clone
+            this.updateDragPosition(pos.x, pos.y);
+
+            // Haptic feedback
+            if (navigator.vibrate) navigator.vibrate(15);
+        } catch (error) {
+            console.warn('Drag start error:', error);
+            this.resetDragState();
+        }
     }
 
     handleDragMove(e) {
@@ -552,27 +575,39 @@ class BlockBlast {
     handleDragEnd(e) {
         if (!this.isDragging) return;
 
-        const pos = this.getEventPosition(e);
+        try {
+            const pos = this.getEventPosition(e);
 
-        // Try to place the piece
-        if (this.lastValidPosition) {
-            const { row, col } = this.lastValidPosition;
-            if (this.canPlacePiece(this.draggingPiece, row, col)) {
-                this.placePiece(this.draggingPiece, row, col, this.draggingSlotIndex);
+            // Try to place the piece
+            if (this.lastValidPosition && this.draggingPiece) {
+                const { row, col } = this.lastValidPosition;
+                if (this.canPlacePiece(this.draggingPiece, row, col)) {
+                    this.placePiece(this.draggingPiece, row, col, this.draggingSlotIndex);
+                }
             }
+        } catch (error) {
+            console.warn('Drag end error:', error);
         }
 
-        // Cleanup
+        // Always cleanup, even if there was an error
+        this.resetDragState();
+    }
+
+    resetDragState() {
+        // Remove any dragging clone
         const clone = document.getElementById('dragging-piece');
         if (clone) clone.remove();
 
-        if (this.draggingPieceElement) {
-            this.draggingPieceElement.classList.remove('faded');
-        }
+        // Remove faded class from ALL pieces (safety)
+        document.querySelectorAll('.piece.faded').forEach(el => {
+            el.classList.remove('faded');
+        });
 
+        // Clear visual states
         this.clearHighlight();
         this.hideGhostPreview();
 
+        // Reset all drag state variables
         this.isDragging = false;
         this.draggingPiece = null;
         this.draggingPieceElement = null;

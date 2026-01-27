@@ -1061,8 +1061,8 @@ class BlockBlast {
     addScore(points) {
         this.score += points;
         this.updateScore();
-        // Check level progression
-        this.checkLevelProgress();
+        // Levels disabled - endless mode only
+        // this.checkLevelProgress();
     }
 
     checkLevelProgress() {
@@ -1287,17 +1287,17 @@ class BlockBlast {
 
         this.createBoard();
 
-        // Place obstacles from level data
-        const levelData = this.levelManager.getCurrentLevelData();
-        if (levelData && levelData.obstaclePattern) {
-            levelData.obstaclePattern.forEach(pos => {
-                if (pos.r < this.boardSize && pos.c < this.boardSize) {
-                    this.board[pos.r][pos.c] = 'grey'; // Obstacle color
-                    const cell = this.getCellElement(pos.r, pos.c);
-                    if (cell) cell.classList.add('filled', 'obstacle');
-                }
-            });
-        }
+        // Levels disabled - no obstacles placed (endless mode)
+        // const levelData = this.levelManager.getCurrentLevelData();
+        // if (levelData && levelData.obstaclePattern) {
+        //     levelData.obstaclePattern.forEach(pos => {
+        //         if (pos.r < this.boardSize && pos.c < this.boardSize) {
+        //             this.board[pos.r][pos.c] = 'grey';
+        //             const cell = this.getCellElement(pos.r, pos.c);
+        //             if (cell) cell.classList.add('filled', 'obstacle');
+        //         }
+        //     });
+        // }
 
         this.generateNewPieces();
         this.updateScore();

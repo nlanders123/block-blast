@@ -242,14 +242,11 @@ class BlockBlast {
         this.touchOffset = 120;
 
         // Colors with hex values for particles
-        this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green'];
+        this.colors = ['magenta', 'cyan', 'yellow'];
         this.colorHex = {
-            purple: '#a855f7',
-            cyan: '#22d3ee',
-            orange: '#f97316',
-            blue: '#3b82f6',
-            red: '#ef4444',
-            green: '#22c55e'
+            magenta: '#FF00FF',
+            cyan: '#00FFFF',
+            yellow: '#FFFF00',
         };
 
         // Sound Manager
@@ -637,16 +634,21 @@ class BlockBlast {
         const clone = document.getElementById('dragging-piece');
         if (!clone) return;
 
-        // Fixed offset: 3 cell sizes above finger for mobile, less for desktop
         const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-        const isMobile = window.matchMedia('(pointer: coarse)').matches;
-        const offsetY = isMobile ? cellSize * 3 : 30;
+        const col = Math.floor((x - boardRect.left) / (this.boardElement.offsetWidth / this.boardSize));
+        const row = Math.floor((y - boardRect.top) / (this.boardElement.offsetHeight / this.boardSize));
 
-        // Position piece centered horizontally, offset vertically
-        clone.style.left = `${x}px`;
-        clone.style.top = `${y - offsetY}px`;
-        clone.style.transform = 'translate(-50%, -50%) scale(1.1)';
+        if (this.canPlacePiece(this.draggingPiece, row, col)) {
+            const cellElement = this.getCellElement(row, col);
+            if (cellElement) {
+                const rect = cellElement.getBoundingClientRect();
+                clone.style.left = `${rect.left}px`;
+                clone.style.top = `${rect.top}px`;
+            }
+        } else {
+            clone.style.left = `${x - clone.offsetWidth / 2}px`;
+            clone.style.top = `${y - clone.offsetHeight / 2}px`;
+        }
     }
 
     updateHighlight(x, y) {

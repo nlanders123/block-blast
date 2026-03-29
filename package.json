@@ -1,12 +1,13 @@
 {
-  "name": "line-crush",
+  "name": "block-royale",
   "version": "1.0.0",
-  "description": "A colorful puzzle game with drag and drop mechanics",
+  "description": "A neon block puzzle game",
   "main": "index.html",
   "scripts": {
+    "test": "jest",
     "start": "npx serve .",
-    "build": "mkdir -p www && cp index.html style.css game.js manifest.json service-worker.js www/ && cp -r ./*.png www/ 2>/dev/null || true",
-    "cap:init": "npx cap init BlockBlast com.blockblast.app --web-dir www",
+    "build": "mkdir -p www && cp index.html style.css game-logic.js game.js levels.js manifest.json service-worker.js apple-touch-icon.png icon-192.png icon-512.png www/ 2>/dev/null; true",
+    "cap:init": "npx cap init BlockRoyale com.blockroyale.app --web-dir www",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync",
@@ -17,7 +18,7 @@
     "game",
     "puzzle",
     "block",
-    "blast"
+    "royale"
   ],
   "author": "",
   "license": "MIT",
@@ -28,6 +29,8 @@
     "@capacitor/android": "^5.0.0",
     "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^5.0.0",
-    "@capacitor/ios": "^5.0.0"
+    "@capacitor/ios": "^5.0.0",
+    "jest": "^30.3.0",
+    "playwright": "^1.58.2"
   }
 }

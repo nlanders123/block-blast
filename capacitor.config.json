@@ -1,6 +1,6 @@
 {
-    "appId": "com.linecrush.app",
-    "appName": "Line Crush",
+    "appId": "com.blockroyale.app",
+    "appName": "Block Royale",
     "webDir": "www",
     "bundledWebRuntime": false,
     "server": {
@@ -9,12 +9,12 @@
     "plugins": {
         "SplashScreen": {
             "launchShowDuration": 2000,
-            "backgroundColor": "#0A0E27",
+            "backgroundColor": "#22101a",
             "showSpinner": false
         },
         "StatusBar": {
             "style": "dark",
-            "backgroundColor": "#0A0E27"
+            "backgroundColor": "#22101a"
         }
     }
 }

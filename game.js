@@ -1,7 +1,6 @@
 /**
- * BLOCK BLAST - Game Engine
- * A puzzle game with drag-and-drop mechanics
- * Enhanced with: High Score, Sound Effects, Particle Explosions, Improved Touch
+ * BLOCK ROYALE — Game Engine
+ * A neon block puzzle game with drag-and-drop mechanics
  */
 
 class SoundManager {
@@ -227,29 +226,35 @@ class BlockBlast {
         this.isPaused = false;
         this.isGameOver = false;
 
-        // Drag state - improved for mobile
+        // Drag state
         this.draggingPiece = null;
         this.draggingPieceElement = null;
         this.draggingSlotIndex = null;
         this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
+        this.dragConfirmed = false;
         this.currentHighlight = [];
         this.lastValidPosition = null;
-        this.lastDragTime = 0; // For throttling drag events
-        this.dragTimeout = null; // Auto-reset timeout
+        this.lastPointerPos = null;
+        this.lastDragTime = 0;
+        this.dragClone = null;
+        this.dragCache = null; // Cached layout values for drag session
+        this.lastSnapRow = -1;
+        this.lastSnapCol = -1;
 
-        // Touch offset - piece appears above finger on mobile
-        this.touchOffset = 120;
+        // Settings
+        this.hapticsEnabled = true;
 
         // Colors with hex values for particles
-        this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green'];
+        this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green', 'yellow'];
         this.colorHex = {
             purple: '#a855f7',
-            cyan: '#22d3ee',
-            orange: '#f97316',
+            cyan: '#2dd4bf',
+            orange: '#fb923c',
             blue: '#3b82f6',
-            red: '#ef4444',
-            green: '#22c55e'
+            red: '#f43f5e',
+            green: '#10b981',
+            yellow: '#facc15'
         };
 
         // Sound Manager
@@ -298,7 +303,6 @@ class BlockBlast {
         this.modalHighScoreElement = document.getElementById('modalHighScore');
         this.newHighScoreElement = document.getElementById('newHighScore');
         this.effectsContainer = document.getElementById('effectsContainer');
-        this.ghostPreview = document.getElementById('ghostPreview');
 
         // Leaderboard elements
         this.leaderboardModal = document.getElementById('leaderboardModal');
@@ -319,6 +323,41 @@ class BlockBlast {
         this.bindEvents();
         this.generateNewPieces();
         this.updateScore();
+        this.prewarmAnimations();
+    }
+
+    /**
+     * Pre-warm CSS animations so iOS Safari compiles keyframes before first use.
+     * Without this, the first line clear stutters while the browser parses
+     * particle-explode, sparkle-fade, jelly-squish-pop for the first time.
+     */
+    prewarmAnimations() {
+        const container = this.effectsContainer;
+        if (!container) return;
+
+        // Create off-screen elements (not opacity:0 — Safari skips animations on invisible elements)
+        const particle = document.createElement('div');
+        particle.className = 'clear-particle';
+        particle.style.cssText = 'position:fixed;left:-100px;top:-100px;--tx:10px;--ty:10px;background:red;';
+
+        const cell = document.createElement('div');
+        cell.className = 'cell clearing';
+        cell.style.cssText = 'position:fixed;left:-100px;top:-100px;width:30px;height:30px;';
+
+        container.appendChild(particle);
+        container.appendChild(cell);
+
+        // Force style + layout computation so the browser compiles keyframes NOW
+        getComputedStyle(particle).transform;
+        getComputedStyle(cell).transform;
+
+        // Remove after animation would have started
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                particle.remove();
+                cell.remove();
+            });
+        });
     }
 
     loadHighScore() {
@@ -356,19 +395,19 @@ class BlockBlast {
     }
 
     createBoard() {
-        this.board = [];
+        this.board = createEmptyBoard(this.boardSize);
         this.boardElement.innerHTML = '';
+        this.cellElements = []; // Cache cell DOM refs — avoids querySelector per access
 
         for (let row = 0; row < this.boardSize; row++) {
-            this.board[row] = [];
+            this.cellElements[row] = [];
             for (let col = 0; col < this.boardSize; col++) {
-                this.board[row][col] = null;
-
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.dataset.row = row;
                 cell.dataset.col = col;
                 this.boardElement.appendChild(cell);
+                this.cellElements[row][col] = cell;
             }
         }
     }
@@ -456,14 +495,7 @@ class BlockBlast {
             });
         }
 
-        const homeBtn = document.getElementById('homeBtn');
-        if (homeBtn) {
-            homeBtn.addEventListener('click', () => {
-                this.sound.play('button');
-                this.gameOverModal.classList.remove('active');
-                this.newGame(); // Basically reset to start
-            });
-        }
+        // Home button is handled by the start screen controller in the DOMContentLoaded block
 
         // Level Complete Next Button
         const nextLevelBtn = document.getElementById('nextLevelBtn');
@@ -512,85 +544,161 @@ class BlockBlast {
         return { x: e.clientX, y: e.clientY };
     }
 
+    // =====================================================
+    // DRAG SYSTEM
+    // Floating clone follows finger at board cell size.
+    // Board cells show coloured preview at snap position.
+    // Y offset on mobile so thumb doesn't cover the piece.
+    // =====================================================
+
     handleDragStart(e) {
         if (this.isPaused || this.isGameOver) return;
 
-        // Safety: Reset any stuck drag state first
-        if (this.isDragging) {
-            this.resetDragState();
-        }
+        if (this.isDragging) this.resetDragState();
 
         try {
             const pos = this.getEventPosition(e);
             const target = document.elementFromPoint(pos.x, pos.y);
-            const pieceElement = target?.closest('.piece');
 
-            if (!pieceElement) return;
+            // Try direct hit on piece first, then fall back to piece inside the slot
+            let pieceElement = target?.closest('.piece');
+            let slotElement;
+
+            if (pieceElement) {
+                slotElement = pieceElement.closest('.piece-slot');
+            } else {
+                // Touch landed on slot padding — grab the piece inside
+                slotElement = target?.closest('.piece-slot');
+                if (slotElement) {
+                    pieceElement = slotElement.querySelector('.piece');
+                }
+            }
+
+            if (!pieceElement || !slotElement || !slotElement.dataset.slot) return;
 
             e.preventDefault();
-
-            const slotElement = pieceElement.closest('.piece-slot');
-            if (!slotElement || !slotElement.dataset.slot) return;
 
             const slotIndex = parseInt(slotElement.dataset.slot);
             if (isNaN(slotIndex) || !this.pieces[slotIndex]) return;
 
             this.isDragging = true;
+            this.dragConfirmed = false;
             this.draggingPiece = this.pieces[slotIndex];
             this.draggingPieceElement = pieceElement;
             this.draggingSlotIndex = slotIndex;
             this.dragStartPos = pos;
+            this.lastValidPosition = null;
+            this.lastSnapRow = -1;
+            this.lastSnapCol = -1;
 
-            // Clone the piece for dragging
-            const clone = pieceElement.cloneNode(true);
-            clone.classList.add('dragging');
-            clone.id = 'dragging-piece';
-            document.body.appendChild(clone);
-
-            // Fade original
-            pieceElement.classList.add('faded');
-
-            // Position the clone
-            this.updateDragPosition(pos.x, pos.y);
-
-            // Haptic feedback
-            if (navigator.vibrate) navigator.vibrate(15);
-
-            // Safety timeout: auto-reset if drag lasts more than 5 seconds
-            this.dragTimeout = setTimeout(() => {
-                if (this.isDragging) {
-                    console.warn('Drag timeout - auto-resetting');
-                    this.resetDragState();
-                }
-            }, 5000);
+            // Cache layout values once — avoids getComputedStyle on every frame
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const gap = parseFloat(getComputedStyle(this.boardElement).gap) || 6;
+            const cellSize = (boardRect.width - gap * (this.boardSize - 1)) / this.boardSize;
+            const stride = cellSize + gap;
+            const isMobile = window.matchMedia('(pointer: coarse)').matches;
+            this.dragCache = { boardRect, gap, cellSize, stride, isMobile };
         } catch (error) {
             console.warn('Drag start error:', error);
             this.resetDragState();
         }
     }
 
+    /**
+     * Create a floating clone of the piece at board cell size.
+     * Called once when drag is confirmed (past dead zone).
+     */
+    createDragClone(piece) {
+        const clone = document.createElement('div');
+        clone.className = 'drag-clone';
+
+        const { cellSize, gap } = this.dragCache;
+        const cols = piece.shape[0].length;
+        const rows = piece.shape.length;
+
+        clone.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+        clone.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+        clone.style.gap = `${gap}px`;
+
+        for (let r = 0; r < piece.shape.length; r++) {
+            for (let c = 0; c < piece.shape[r].length; c++) {
+                const cell = document.createElement('div');
+                if (piece.shape[r][c] === 1) {
+                    cell.className = `drag-cell color-${piece.color}`;
+                } else {
+                    cell.style.visibility = 'hidden';
+                }
+                clone.appendChild(cell);
+            }
+        }
+
+        document.body.appendChild(clone);
+        this.dragClone = clone;
+    }
+
     handleDragMove(e) {
         if (!this.isDragging) return;
-
         e.preventDefault();
 
-        // Throttle to ~60fps to prevent lag
+        const pos = this.getEventPosition(e);
+
+        // Dead zone: require 8px movement before starting drag
+        if (!this.dragConfirmed) {
+            const dx = pos.x - this.dragStartPos.x;
+            const dy = pos.y - this.dragStartPos.y;
+            if (dx * dx + dy * dy < 64) return;
+
+            this.dragConfirmed = true;
+            // Hide tray piece, create floating clone
+            this.draggingPieceElement.classList.add('dragging-hidden');
+            this.createDragClone(this.draggingPiece);
+            if (this.hapticsEnabled && navigator.vibrate) navigator.vibrate(15);
+        }
+
+        // Throttle to ~60fps
         const now = Date.now();
         if (now - this.lastDragTime < 16) return;
         this.lastDragTime = now;
 
-        const pos = this.getEventPosition(e);
-        this.updateDragPosition(pos.x, pos.y);
-        this.updateHighlight(pos.x, pos.y);
+        // Move the floating clone to follow finger
+        this.updateClonePosition(pos.x, pos.y);
+
+        // Update board grid preview
+        this.updateGridSnap(pos.x, pos.y);
+    }
+
+    /**
+     * Position the drag clone centered on the finger with Y offset.
+     */
+    updateClonePosition(x, y) {
+        if (!this.dragClone || !this.draggingPiece || !this.dragCache) return;
+
+        const { cellSize, gap, stride, isMobile } = this.dragCache;
+        const piece = this.draggingPiece;
+        const cols = piece.shape[0].length;
+        const rows = piece.shape.length;
+
+        const cloneW = cols * cellSize + (cols - 1) * gap;
+        const cloneH = rows * cellSize + (rows - 1) * gap;
+        const offsetY = isMobile ? stride * 1.5 : 0;
+
+        this.dragClone.style.left = `${x - cloneW / 2}px`;
+        this.dragClone.style.top = `${y - offsetY - cloneH / 2}px`;
     }
 
     handleDragEnd(e) {
         if (!this.isDragging) return;
 
         try {
-            const pos = this.getEventPosition(e);
+            if (!this.dragConfirmed) {
+                this.resetDragState();
+                return;
+            }
 
-            // Try to place the piece
+            // Clear preview highlights BEFORE placing so they don't strip the colour
+            this.clearHighlight();
+
+            // Place piece if we have a valid snap position
             if (this.lastValidPosition && this.draggingPiece) {
                 const { row, col } = this.lastValidPosition;
                 if (this.canPlacePiece(this.draggingPiece, row, col)) {
@@ -601,116 +709,90 @@ class BlockBlast {
             console.warn('Drag end error:', error);
         }
 
-        // Always cleanup, even if there was an error
         this.resetDragState();
     }
 
     resetDragState() {
-        // Clear any pending timeout
-        if (this.dragTimeout) {
-            clearTimeout(this.dragTimeout);
-            this.dragTimeout = null;
+        // Remove drag clone
+        if (this.dragClone) {
+            this.dragClone.remove();
+            this.dragClone = null;
         }
 
-        // Remove any dragging clone
-        const clone = document.getElementById('dragging-piece');
-        if (clone) clone.remove();
-
-        // Remove faded class from ALL pieces (safety)
-        document.querySelectorAll('.piece.faded').forEach(el => {
-            el.classList.remove('faded');
+        // Restore tray piece visibility
+        document.querySelectorAll('.piece.dragging-hidden').forEach(el => {
+            el.classList.remove('dragging-hidden');
         });
 
-        // Clear visual states
+        // Clear board preview
         this.clearHighlight();
-        this.hideGhostPreview();
 
-        // Reset all drag state variables
+        // Reset state
         this.isDragging = false;
+        this.dragConfirmed = false;
         this.draggingPiece = null;
         this.draggingPieceElement = null;
         this.draggingSlotIndex = null;
         this.lastValidPosition = null;
+        this.dragCache = null;
+        this.lastSnapRow = -1;
+        this.lastSnapCol = -1;
     }
 
-    updateDragPosition(x, y) {
-        const clone = document.getElementById('dragging-piece');
-        if (!clone) return;
+    /**
+     * Core drag system.
+     * Maps finger position to board grid with a small Y offset so the
+     * player can see the piece above their thumb.
+     * Clamps to board edges when finger is near/off the board.
+     */
+    updateGridSnap(x, y) {
+        if (!this.draggingPiece || !this.dragCache) return;
 
-        // Fixed offset: 3 cell sizes above finger for mobile, less for desktop
-        const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-        const isMobile = window.matchMedia('(pointer: coarse)').matches;
-        const offsetY = isMobile ? cellSize * 3 : 30;
+        const { boardRect, stride, isMobile } = this.dragCache;
+        const offsetY = isMobile ? stride * 1.5 : 0;
 
-        // Position piece centered horizontally, offset vertically
-        clone.style.left = `${x}px`;
-        clone.style.top = `${y - offsetY}px`;
-        clone.style.transform = 'translate(-50%, -50%) scale(1.1)';
-    }
-
-    updateHighlight(x, y) {
-        this.clearHighlight();
-
-        if (!this.draggingPiece) return;
-
-        const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-
-        // Use same offset as updateDragPosition for consistency
-        const isMobile = window.matchMedia('(pointer: coarse)').matches;
-        const offsetY = isMobile ? cellSize * 3 : 30;
-
-        // Calculate the center point of where the piece would be placed
-        const targetY = y - offsetY;
-        const targetX = x;
-
-        // Calculate grid position based on piece center
-        // Offset by half the piece size to get top-left corner
         const shape = this.draggingPiece.shape;
-        const pieceWidthCells = shape[0].length;
-        const pieceHeightCells = shape.length;
+        const pieceW = shape[0].length;
+        const pieceH = shape.length;
 
-        // Calculate which cell the center of the piece is over
-        const centerCol = (targetX - boardRect.left) / cellSize;
-        const centerRow = (targetY - boardRect.top) / cellSize;
+        // Map finger position (with offset) to grid
+        const centerCol = (x - boardRect.left) / stride;
+        const centerRow = (y - offsetY - boardRect.top) / stride;
 
         // Convert to top-left cell of piece
-        const col = Math.round(centerCol - pieceWidthCells / 2);
-        const row = Math.round(centerRow - pieceHeightCells / 2);
+        let col = Math.floor(centerCol - pieceW / 2 + 0.5);
+        let row = Math.floor(centerRow - pieceH / 2 + 0.5);
 
-        // Check if completely outside board
-        if (row + pieceHeightCells <= 0 || col + pieceWidthCells <= 0 ||
-            row >= this.boardSize || col >= this.boardSize) {
-            this.hideGhostPreview();
-            this.lastValidPosition = null;
-            return;
-        }
+        // Clamp to board edges — keeps preview visible when finger drifts off
+        col = Math.max(0, Math.min(col, this.boardSize - pieceW));
+        row = Math.max(0, Math.min(row, this.boardSize - pieceH));
+
+        // Skip DOM work if snap position hasn't changed
+        if (row === this.lastSnapRow && col === this.lastSnapCol) return;
+        this.lastSnapRow = row;
+        this.lastSnapCol = col;
+
+        // Now clear previous highlight and rebuild
+        this.clearHighlight();
 
         const canPlace = this.canPlacePiece(this.draggingPiece, row, col);
 
         if (canPlace) {
-            // Haptic feedback when snapping to a new valid position
             const isNewPos = !this.lastValidPosition ||
                 this.lastValidPosition.row !== row ||
                 this.lastValidPosition.col !== col;
 
-            if (isNewPos && navigator.vibrate) {
+            if (isNewPos && this.hapticsEnabled && navigator.vibrate) {
                 navigator.vibrate(10);
             }
 
             this.lastValidPosition = { row, col };
-            this.showGhostPreview(row, col);
-
-            // Add valid class for green shadow
-            if (this.ghostPreview) this.ghostPreview.classList.add('valid');
         } else {
             this.lastValidPosition = null;
-            if (this.ghostPreview) this.ghostPreview.classList.remove('valid');
-            this.hideGhostPreview();
         }
 
-        // Highlight cells on the board
+        // Show coloured preview on the board cells
+        const color = this.draggingPiece.color;
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] === 1) {
@@ -721,8 +803,14 @@ class BlockBlast {
                         cellCol >= 0 && cellCol < this.boardSize) {
                         const cell = this.getCellElement(cellRow, cellCol);
                         if (cell) {
-                            cell.classList.add(canPlace ? 'highlight' : 'invalid');
-                            this.currentHighlight.push(cell);
+                            const colorClass = `color-${color}`;
+                            if (canPlace) {
+                                cell.classList.add('preview-piece', colorClass);
+                                this.currentHighlight.push({ cell, addedClass: colorClass });
+                            } else {
+                                cell.classList.add('invalid');
+                                this.currentHighlight.push({ cell, addedClass: null });
+                            }
                         }
                     }
                 }
@@ -730,107 +818,39 @@ class BlockBlast {
         }
     }
 
-    showGhostPreview(row, col) {
-        if (!this.ghostPreview || !this.draggingPiece) return;
-
-        // Get target anchoring cell for exact positioning
-        const targetCell = this.getCellElement(row, col);
-        if (!targetCell) return;
-
-        const cellRect = targetCell.getBoundingClientRect();
-        const cellSize = cellRect.width;
-        const shape = this.draggingPiece.shape;
-        const gap = 4; // Matches --cell-gap in CSS
-
-        this.ghostPreview.innerHTML = '';
-        this.ghostPreview.style.display = 'grid';
-        this.ghostPreview.style.gridTemplateColumns = `repeat(${shape[0].length}, ${cellSize}px)`;
-        this.ghostPreview.style.gap = `${gap}px`;
-        this.ghostPreview.style.left = `${cellRect.left}px`;
-        this.ghostPreview.style.top = `${cellRect.top}px`;
-        this.ghostPreview.classList.add('visible');
-
-        for (let r = 0; r < shape.length; r++) {
-            for (let c = 0; c < shape[r].length; c++) {
-                const cell = document.createElement('div');
-                if (shape[r][c] === 1) {
-                    cell.className = 'ghost-cell';
-                    cell.style.width = `${cellSize}px`;
-                    cell.style.height = `${cellSize}px`;
-                } else {
-                    cell.style.visibility = 'hidden';
-                    cell.style.width = `${cellSize}px`;
-                    cell.style.height = `${cellSize}px`;
-                }
-                this.ghostPreview.appendChild(cell);
+    clearHighlight() {
+        for (let i = 0; i < this.currentHighlight.length; i++) {
+            const { cell, addedClass } = this.currentHighlight[i];
+            cell.classList.remove('highlight', 'invalid', 'preview-piece');
+            // Only remove color from non-placed cells — placed blocks keep their color
+            if (addedClass && !cell.classList.contains('filled')) {
+                cell.classList.remove(addedClass);
             }
         }
-    }
-
-    hideGhostPreview() {
-        if (this.ghostPreview) {
-            this.ghostPreview.classList.remove('visible');
-            this.ghostPreview.classList.remove('valid');
-            this.ghostPreview.innerHTML = '';
-            this.ghostPreview.style.display = 'none';
-        }
-    }
-
-    clearHighlight() {
-        this.currentHighlight.forEach(cell => {
-            cell.classList.remove('highlight', 'invalid');
-        });
         this.currentHighlight = [];
-
-        // Clear preview highlights
-        document.querySelectorAll('.preview-clear').forEach(el => el.classList.remove('preview-clear'));
     }
 
     getCellElement(row, col) {
-        return this.boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        return this.cellElements[row]?.[col];
     }
 
     canPlacePiece(piece, startRow, startCol) {
-        const shape = piece.shape;
-
-        for (let r = 0; r < shape.length; r++) {
-            for (let c = 0; c < shape[r].length; c++) {
-                if (shape[r][c] === 1) {
-                    const row = startRow + r;
-                    const col = startCol + c;
-
-                    if (row < 0 || row >= this.boardSize ||
-                        col < 0 || col >= this.boardSize) {
-                        return false;
-                    }
-
-                    if (this.board[row][col] !== null) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
+        return canPlacePiece(this.board, piece, startRow, startCol);
     }
 
     placePiece(piece, startRow, startCol, pieceIndex) {
         this.saveState();
         this.sound.play('place');
 
-        const shape = piece.shape;
-        const color = piece.color;
-        let blockCount = 0;
+        const blockCount = placePieceOnBoard(this.board, piece, startRow, startCol);
 
+        // Update DOM to reflect board state
+        const shape = piece.shape;
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] === 1) {
-                    const row = startRow + r;
-                    const col = startCol + c;
-
-                    this.board[row][col] = color;
-                    const cell = this.getCellElement(row, col);
-                    cell.classList.add('filled', `color-${color}`);
-                    blockCount++;
+                    const cell = this.getCellElement(startRow + r, startCol + c);
+                    cell.classList.add('filled', `color-${piece.color}`);
                 }
             }
         }
@@ -839,41 +859,18 @@ class BlockBlast {
         this.pieces[pieceIndex] = null;
         this.renderPieces();
 
-        setTimeout(() => {
-            this.checkAndClearLines();
+        this.checkAndClearLines();
 
-            if (this.pieces.every(p => p === null)) {
-                this.generateNewPieces();
-            }
+        if (this.pieces.every(p => p === null)) {
+            this.generateNewPieces();
+        }
 
-            this.checkGameOver();
-        }, 50);
+        this.checkGameOver();
     }
 
     checkAndClearLines() {
-        const rowsToClear = [];
-        const colsToClear = [];
-
-        for (let row = 0; row < this.boardSize; row++) {
-            if (this.board[row].every(cell => cell !== null)) {
-                rowsToClear.push(row);
-            }
-        }
-
-        for (let col = 0; col < this.boardSize; col++) {
-            let fullColumn = true;
-            for (let row = 0; row < this.boardSize; row++) {
-                if (this.board[row][col] === null) {
-                    fullColumn = false;
-                    break;
-                }
-            }
-            if (fullColumn) {
-                colsToClear.push(col);
-            }
-        }
-
-        const totalLines = rowsToClear.length + colsToClear.length;
+        const { rows, cols, cellsToClear } = findLinesToClear(this.board);
+        const totalLines = rows.length + cols.length;
 
         if (totalLines > 0) {
             if (totalLines > 1) {
@@ -882,38 +879,37 @@ class BlockBlast {
                 this.sound.play('clear');
             }
 
-            const cellsToClear = new Set();
-            const cellColors = new Map();
-
-            rowsToClear.forEach(row => {
-                for (let col = 0; col < this.boardSize; col++) {
-                    const key = `${row}-${col}`;
-                    cellsToClear.add(key);
-                    cellColors.set(key, this.board[row][col]);
-                }
-            });
-
-            colsToClear.forEach(col => {
-                for (let row = 0; row < this.boardSize; row++) {
-                    const key = `${row}-${col}`;
-                    cellsToClear.add(key);
-                    cellColors.set(key, this.board[row][col]);
-                }
-            });
-
+            // Read all positions BEFORE any DOM writes
+            const clearData = [];
             cellsToClear.forEach(key => {
                 const [row, col] = key.split('-').map(Number);
                 const cell = this.getCellElement(row, col);
-                const color = cellColors.get(key);
-
-                cell.classList.add('clearing');
-                this.spawnParticleExplosion(cell, color);
+                const color = this.board[row][col];
+                const rect = cell.getBoundingClientRect();
+                clearData.push({ cell, color, centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 });
             });
 
-            const baseScore = cellsToClear.size * 10;
-            const comboBonus = totalLines > 1 ? totalLines * 50 : 0;
-            const totalScore = baseScore + comboBonus;
+            // Update board data
+            clearCells(this.board, cellsToClear);
 
+            // Write — add clearing class + particles
+            const container = this.effectsContainer;
+            for (const { cell, color, centerX, centerY } of clearData) {
+                cell.classList.add('clearing');
+                const hex = this.colorHex[color] || '#FFFFFF';
+                for (let i = 0; i < 2; i++) {
+                    const particle = document.createElement('div');
+                    particle.className = 'clear-particle';
+                    const angle = Math.PI * i + (Math.random() - 0.5);
+                    const dist = 30 + Math.random() * 40;
+                    particle.style.cssText = `left:${centerX}px;top:${centerY}px;background:${hex};box-shadow:0 0 8px ${hex};--tx:${Math.cos(angle) * dist}px;--ty:${Math.sin(angle) * dist}px`;
+                    container.appendChild(particle);
+                    setTimeout(() => particle.remove(), 700);
+                }
+            }
+
+            // Score + UI
+            const totalScore = calculateClearScore(cellsToClear.size, totalLines);
             this.addScore(totalScore);
 
             if (totalLines > 1) {
@@ -922,59 +918,12 @@ class BlockBlast {
 
             this.showScorePopup(totalScore);
 
+            // Visual cleanup after animation (matches 200ms clear-flash)
             setTimeout(() => {
-                cellsToClear.forEach(key => {
-                    const [row, col] = key.split('-').map(Number);
-                    this.board[row][col] = null;
-                    const cell = this.getCellElement(row, col);
-                    cell.className = 'cell flash';
-
-                    setTimeout(() => cell.classList.remove('flash'), 250);
-                });
-            }, 400);
-        }
-    }
-
-    spawnParticleExplosion(cell, colorName) {
-        const rect = cell.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const color = this.colorHex[colorName] || '#FFFFFF';
-
-        const particleCount = 6;
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'clear-particle';
-
-            const angle = (Math.PI * 2 / particleCount) * i + (Math.random() - 0.5) * 0.5;
-            const distance = 35 + Math.random() * 50;
-            const tx = Math.cos(angle) * distance;
-            const ty = Math.sin(angle) * distance;
-
-            particle.style.left = `${centerX}px`;
-            particle.style.top = `${centerY}px`;
-            particle.style.background = color;
-            particle.style.boxShadow = `0 0 8px ${color}`;
-            particle.style.setProperty('--tx', `${tx}px`);
-            particle.style.setProperty('--ty', `${ty}px`);
-
-            this.effectsContainer.appendChild(particle);
-
-            setTimeout(() => particle.remove(), 700);
-        }
-
-        for (let i = 0; i < 3; i++) {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'sparkle';
-            sparkle.style.left = `${centerX + (Math.random() - 0.5) * 25}px`;
-            sparkle.style.top = `${centerY + (Math.random() - 0.5) * 25}px`;
-            sparkle.style.color = color;
-            sparkle.style.animationDelay = `${Math.random() * 0.15}s`;
-
-            this.effectsContainer.appendChild(sparkle);
-
-            setTimeout(() => sparkle.remove(), 500);
+                for (const { cell } of clearData) {
+                    cell.className = 'cell';
+                }
+            }, 200);
         }
     }
 
@@ -1039,8 +988,8 @@ class BlockBlast {
 
             const pieceElement = document.createElement('div');
             pieceElement.className = 'piece';
-            pieceElement.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 30px)`;
-            pieceElement.style.gridTemplateRows = `repeat(${piece.shape.length}, 30px)`;
+            pieceElement.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 1fr)`;
+            pieceElement.style.gridTemplateRows = `repeat(${piece.shape.length}, 1fr)`;
 
             for (let r = 0; r < piece.shape.length; r++) {
                 for (let c = 0; c < piece.shape[r].length; c++) {
@@ -1139,17 +1088,7 @@ class BlockBlast {
     checkGameOver() {
         const availablePieces = this.pieces.filter(p => p !== null);
 
-        for (const piece of availablePieces) {
-            for (let row = 0; row < this.boardSize; row++) {
-                for (let col = 0; col < this.boardSize; col++) {
-                    if (this.canPlacePiece(piece, row, col)) {
-                        return;
-                    }
-                }
-            }
-        }
-
-        if (availablePieces.length > 0) {
+        if (availablePieces.length > 0 && !hasValidMove(this.board, availablePieces)) {
             this.gameOver();
         }
     }
@@ -1309,34 +1248,248 @@ class BlockBlast {
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
+    const startScreen = document.getElementById('startScreen');
+    const gameContainer = document.getElementById('gameContainer');
+    const startHighScore = document.getElementById('startHighScore');
+
+    // Load high score for start screen display
+    try {
+        const saved = localStorage.getItem('blockBlastHighScore');
+        if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
+    } catch (e) {}
+
+    // Settings state
+    const settings = {
+        sound: localStorage.getItem('blockRoyaleSound') !== 'false',
+        haptics: localStorage.getItem('blockRoyaleHaptics') !== 'false',
+    };
+
+    function showStartScreen() {
+        startScreen.classList.remove('hidden');
+        gameContainer.style.display = 'none';
+
+        // Update high score on start screen
+        try {
+            const saved = localStorage.getItem('blockBlastHighScore');
+            if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
+        } catch (e) {}
+    }
+
+    function startGame() {
+        // Init and unlock audio on this user gesture (must happen synchronously within tap)
+        if (window.game && window.game.sound) {
+            window.game.sound.init();
+            if (window.game.sound.audioContext) {
+                // Resume must be called synchronously in the gesture, not in a .then()
+                window.game.sound.audioContext.resume();
+                // Play an audible "start" tone to unlock iOS audio AND give feedback
+                window.game.sound.play('button');
+            }
+        }
+
+        startScreen.classList.add('hidden');
+        gameContainer.style.display = 'flex';
+
+        // Force a synchronous layout so getBoundingClientRect() works immediately
+        // This is cheaper than double-rAF and doesn't delay interaction
+        gameContainer.offsetHeight; // eslint-disable-line no-unused-expressions
+
+        if (window.game) {
+            window.game.newGame();
+        }
+
+        // Show tutorial on first visit
+        if (!localStorage.getItem('blockRoyaleTutorialDone')) {
+            showTutorial();
+        }
+    }
+
+    // Create game instance
     window.game = new BlockBlast();
 
-    const splashScreen = document.getElementById('splashScreen');
-    const gameContainer = document.getElementById('gameContainer');
-    const tapToStart = document.querySelector('.tap-to-start');
+    // Apply saved settings
+    window.game.sound.enabled = settings.sound;
+    window.game.hapticsEnabled = settings.haptics;
 
-    // Only run splash logic if elements exist
-    if (splashScreen && gameContainer && tapToStart) {
-        // Resume audio context on splash click (important for mobile)
-        const startApp = () => {
-            if (window.game && window.game.sound && window.game.sound.audioContext) {
-                window.game.sound.audioContext.resume().catch(e => console.log('Audio resume failed', e));
-            }
+    // Hide game container on load (start screen is visible)
+    gameContainer.style.display = 'none';
 
-            splashScreen.classList.add('hidden');
-            gameContainer.style.opacity = '1';
+    // Play button
+    document.getElementById('playBtn').addEventListener('click', startGame);
 
-            // Remove splash after transition
-            setTimeout(() => {
-                splashScreen.style.display = 'none';
-            }, 500);
+    // Home button → back to start screen
+    const homeBtn = document.getElementById('homeBtn');
+    if (homeBtn) {
+        homeBtn.removeEventListener('click', homeBtn._handler);
+        homeBtn._handler = () => {
+            window.game.sound.play('button');
+            window.game.gameOverModal.classList.remove('active');
+            window.game.isGameOver = false;
+            showStartScreen();
         };
-
-        tapToStart.addEventListener('click', startApp);
-        tapToStart.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent double firing
-            startApp();
-        }, { passive: false });
+        homeBtn.addEventListener('click', homeBtn._handler);
     }
-    // If no splash screen, game starts immediately (current behavior)
+
+    // Leaderboard from start screen
+    document.getElementById('startLeaderboardBtn').addEventListener('click', () => {
+        window.game.showLeaderboard();
+    });
+
+    // Settings from start screen
+    document.getElementById('startSettingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.add('active');
+    });
+
+    // Settings from pause menu
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            window.game.sound.play('button');
+            window.game.pauseModal.classList.remove('active');
+            document.getElementById('settingsModal').classList.add('active');
+        });
+    }
+
+    // Close settings
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        document.getElementById('settingsModal').classList.remove('active');
+    });
+
+    // Sound toggle
+    const soundToggle = document.getElementById('soundToggle');
+    if (!settings.sound) soundToggle.classList.remove('active');
+    soundToggle.addEventListener('click', () => {
+        settings.sound = !settings.sound;
+        soundToggle.classList.toggle('active', settings.sound);
+        window.game.sound.enabled = settings.sound;
+        localStorage.setItem('blockRoyaleSound', settings.sound);
+    });
+
+    // Haptics toggle
+    const hapticsToggle = document.getElementById('hapticsToggle');
+    if (!settings.haptics) hapticsToggle.classList.remove('active');
+    hapticsToggle.addEventListener('click', () => {
+        settings.haptics = !settings.haptics;
+        hapticsToggle.classList.toggle('active', settings.haptics);
+        window.game.hapticsEnabled = settings.haptics;
+        localStorage.setItem('blockRoyaleHaptics', settings.haptics);
+    });
+
+    // Theme toggle (light/dark)
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('blockRoyaleTheme') || 'dark';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    if (savedTheme === 'light') {
+        themeToggle.classList.add('active');
+    }
+    themeToggle.addEventListener('click', () => {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        const newTheme = isLight ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        themeToggle.classList.toggle('active', newTheme === 'light');
+        localStorage.setItem('blockRoyaleTheme', newTheme);
+
+        // Re-render board to apply new theme colours to filled cells
+        if (window.game && window.game.board) {
+            for (let r = 0; r < window.game.boardSize; r++) {
+                for (let c = 0; c < window.game.boardSize; c++) {
+                    const cell = window.game.getCellElement(r, c);
+                    if (cell) {
+                        // Force CSS recalculation by removing and re-adding filled state
+                        if (window.game.board[r][c]) {
+                            const color = window.game.board[r][c];
+                            cell.className = 'cell filled color-' + color;
+                        } else {
+                            cell.className = 'cell';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Clear data
+    document.getElementById('clearDataBtn').addEventListener('click', () => {
+        if (confirm('Clear all scores and settings?')) {
+            localStorage.removeItem('blockBlastHighScore');
+            localStorage.removeItem('blockBlastLeaderboard');
+            localStorage.removeItem('blockRoyaleTutorialDone');
+            localStorage.removeItem('blockRoyaleSound');
+            localStorage.removeItem('blockRoyaleHaptics');
+            localStorage.removeItem('blockRoyaleTheme');
+            document.documentElement.removeAttribute('data-theme');
+            themeToggle.classList.remove('active');
+            window.game.highScore = 0;
+            window.game.updateHighScoreDisplay();
+            window.game.leaderboard.clearScores();
+            if (startHighScore) startHighScore.textContent = '0';
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+    });
+
+    // =====================================================
+    // TUTORIAL
+    // =====================================================
+    const tutorialSteps = [
+        {
+            icon: 'drag_pan',
+            title: 'Drag & Place',
+            desc: 'Drag pieces from the tray onto the board. Position them anywhere they fit.',
+        },
+        {
+            icon: 'align_horizontal_center',
+            title: 'Fill Lines',
+            desc: 'Complete a full row or column to clear it and score points.',
+        },
+        {
+            icon: 'trophy',
+            title: 'Keep Going',
+            desc: 'Clear lines to make room. The game ends when no pieces can be placed.',
+        },
+    ];
+
+    let tutorialStep = 0;
+    let tutorialEl = null;
+
+    function showTutorial() {
+        tutorialStep = 0;
+        tutorialEl = document.createElement('div');
+        tutorialEl.className = 'tutorial-overlay';
+        tutorialEl.innerHTML = buildTutorialHTML(0);
+        document.body.appendChild(tutorialEl);
+
+        requestAnimationFrame(() => tutorialEl.classList.add('visible'));
+
+        tutorialEl.querySelector('.btn-tutorial').addEventListener('click', advanceTutorial);
+    }
+
+    function buildTutorialHTML(step) {
+        const s = tutorialSteps[step];
+        const isLast = step === tutorialSteps.length - 1;
+        const dots = tutorialSteps.map((_, i) =>
+            `<div class="tutorial-dot ${i === step ? 'active' : ''}"></div>`
+        ).join('');
+
+        return `
+            <div class="tutorial-card">
+                <span class="material-symbols-outlined tutorial-icon">${s.icon}</span>
+                <h3 class="tutorial-title">${s.title}</h3>
+                <p class="tutorial-desc">${s.desc}</p>
+                <div class="tutorial-dots">${dots}</div>
+                <button class="btn-tutorial">${isLast ? 'Got it!' : 'Next'}</button>
+            </div>
+        `;
+    }
+
+    function advanceTutorial() {
+        tutorialStep++;
+        if (tutorialStep >= tutorialSteps.length) {
+            localStorage.setItem('blockRoyaleTutorialDone', 'true');
+            tutorialEl.classList.remove('visible');
+            setTimeout(() => tutorialEl.remove(), 300);
+            return;
+        }
+        tutorialEl.innerHTML = buildTutorialHTML(tutorialStep);
+        tutorialEl.querySelector('.btn-tutorial').addEventListener('click', advanceTutorial);
+    }
 });

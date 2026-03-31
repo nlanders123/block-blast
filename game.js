@@ -332,30 +332,65 @@ class BlockBlast {
      * particle-explode, sparkle-fade, jelly-squish-pop for the first time.
      */
     prewarmAnimations() {
+        // Pre-create ALL effect elements so iOS Safari compiles CSS animations
+        // and allocates compositor layers BEFORE gameplay starts.
+        // Creating new animated DOM elements during gameplay causes a multi-second
+        // compositor stall on first use.
+        if (this._prewarmed) return; // idempotent — don't duplicate on newGame
+        this._prewarmed = true;
         const container = this.effectsContainer;
-        if (!container) return;
 
-        // Create off-screen elements (not opacity:0 — Safari skips animations on invisible elements)
-        const particle = document.createElement('div');
-        particle.className = 'clear-particle';
-        particle.style.cssText = 'position:fixed;left:-100px;top:-100px;--tx:10px;--ty:10px;background:red;';
+        // --- Score popup (reusable) ---
+        this._scorePopup = document.createElement('div');
+        container.appendChild(this._scorePopup);
 
-        const cell = document.createElement('div');
-        cell.className = 'cell clearing';
-        cell.style.cssText = 'position:fixed;left:-100px;top:-100px;width:30px;height:30px;';
+        // --- Combo/event text (reusable) ---
+        this._comboText = document.createElement('div');
+        container.appendChild(this._comboText);
 
-        container.appendChild(particle);
-        container.appendChild(cell);
+        // --- Flash overlay for big clears (reusable) ---
+        this._flashOverlay = document.createElement('div');
+        container.appendChild(this._flashOverlay);
 
-        // Force style + layout computation so the browser compiles keyframes NOW
-        getComputedStyle(particle).transform;
-        getComputedStyle(cell).transform;
+        // --- Particle pool (reusable, no DOM creation during gameplay) ---
+        this._particlePool = [];
+        const POOL_SIZE = 24;
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const p = document.createElement('div');
+            p.style.cssText = 'visibility:hidden;';
+            container.appendChild(p);
+            this._particlePool.push(p);
+        }
+        this._particleIndex = 0;
 
-        // Remove after animation would have started
+        // Force browser to compile all animation keyframes by briefly applying classes
+        this._scorePopup.className = 'score-popup';
+        this._scorePopup.textContent = '+0';
+        this._comboText.className = 'combo-text';
+        this._comboText.textContent = 'DOUBLE!';
+        this._flashOverlay.className = 'clear-flash-overlay';
+        this._particlePool.forEach(p => {
+            p.className = 'clear-particle';
+            p.style.cssText = 'left:-50px;top:-50px;--tx:10px;--ty:10px;background:red;';
+        });
+
+        // Read computed styles to force compilation
+        getComputedStyle(this._scorePopup).opacity;
+        getComputedStyle(this._comboText).opacity;
+        getComputedStyle(this._flashOverlay).opacity;
+        if (this._particlePool[0]) getComputedStyle(this._particlePool[0]).opacity;
+
+        // Hide everything after compilation
         requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                particle.remove();
-                cell.remove();
+            this._scorePopup.className = '';
+            this._scorePopup.style.cssText = 'visibility:hidden;';
+            this._comboText.className = '';
+            this._comboText.style.cssText = 'visibility:hidden;';
+            this._flashOverlay.className = '';
+            this._flashOverlay.style.cssText = 'visibility:hidden;';
+            this._particlePool.forEach(p => {
+                p.className = '';
+                p.style.cssText = 'visibility:hidden;';
             });
         });
     }
@@ -410,26 +445,21 @@ class BlockBlast {
                 this.cellElements[row][col] = cell;
             }
         }
+
+        // Cache layout values for line clear particle positioning.
+        // This runs BEFORE any game DOM writes, so no layout flush penalty.
+        requestAnimationFrame(() => {
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const gap = parseFloat(getComputedStyle(this.boardElement).gap) || 6;
+            const cellSize = (boardRect.width - gap * (this.boardSize - 1)) / this.boardSize;
+            this._layoutCache = { boardRect, cellSize, stride: cellSize + gap };
+        });
     }
 
     createParticles() {
-        const container = document.getElementById('particles');
-        if (!container) return;
-
-        const particleCount = 15;
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = `${Math.random() * 100}%`;
-            particle.style.animationDelay = `${Math.random() * 10}s`;
-            particle.style.animationDuration = `${8 + Math.random() * 6}s`;
-
-            const colors = ['#22D3EE', '#A855F7', '#FB923C', '#3B82F6'];
-            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-
-            container.appendChild(particle);
-        }
+        // Disabled — 15 continuously animated elements burn compositor resources
+        // on iOS Safari, contributing to first-interaction jank. Re-enable when
+        // performance budget allows.
     }
 
     bindEvents() {
@@ -450,8 +480,8 @@ class BlockBlast {
         document.addEventListener('touchmove', this.handleDragMove.bind(this), { passive: false });
 
         document.addEventListener('mouseup', this.handleDragEnd.bind(this));
-        document.addEventListener('touchend', this.handleDragEnd.bind(this));
-        document.addEventListener('touchcancel', this.handleDragEnd.bind(this));
+        document.addEventListener('touchend', this.handleDragEnd.bind(this), { passive: false });
+        document.addEventListener('touchcancel', this.handleDragEnd.bind(this), { passive: false });
 
         // Reset drag state if user switches tabs or loses focus
         document.addEventListener('visibilitychange', () => {
@@ -759,6 +789,18 @@ class BlockBlast {
         const centerCol = (x - boardRect.left) / stride;
         const centerRow = (y - offsetY - boardRect.top) / stride;
 
+        // If finger is well below the board (back near the tray), cancel placement.
+        // Must account for the mobile Y offset (stride * 1.5) — targeting the bottom
+        // row puts the finger ~2 strides below the board edge.
+        const boardBottom = boardRect.top + boardRect.height;
+        if (y > boardBottom + stride * 3) {
+            this.clearHighlight();
+            this.lastValidPosition = null;
+            this.lastSnapRow = -1;
+            this.lastSnapCol = -1;
+            return;
+        }
+
         // Convert to top-left cell of piece
         let col = Math.floor(centerCol - pieceW / 2 + 0.5);
         let row = Math.floor(centerRow - pieceH / 2 + 0.5);
@@ -879,46 +921,74 @@ class BlockBlast {
                 this.sound.play('clear');
             }
 
-            // Read all positions BEFORE any DOM writes
+            // Use cached layout values — NO DOM reads allowed here.
+            // Any getBoundingClientRect/getComputedStyle after placePiece's DOM writes
+            // forces iOS Safari to flush a synchronous paint, showing the complete row
+            // before the clearing animation starts (multi-second stall on first clear).
+            const cache = this.dragCache || this._layoutCache;
+            const boardRect = cache.boardRect;
+            const cellSize = cache.cellSize;
+            const stride = cache.stride;
+
             const clearData = [];
             cellsToClear.forEach(key => {
                 const [row, col] = key.split('-').map(Number);
                 const cell = this.getCellElement(row, col);
                 const color = this.board[row][col];
-                const rect = cell.getBoundingClientRect();
-                clearData.push({ cell, color, centerX: rect.left + rect.width / 2, centerY: rect.top + rect.height / 2 });
+                const centerX = boardRect.left + col * stride + cellSize / 2;
+                const centerY = boardRect.top + row * stride + cellSize / 2;
+                clearData.push({ cell, color, centerX, centerY });
             });
 
             // Update board data
             clearCells(this.board, cellsToClear);
 
-            // Write — add clearing class + particles
-            const container = this.effectsContainer;
-            for (const { cell, color, centerX, centerY } of clearData) {
+            // Cell clearing animation
+            for (const { cell } of clearData) {
                 cell.classList.add('clearing');
-                const hex = this.colorHex[color] || '#FFFFFF';
-                for (let i = 0; i < 2; i++) {
-                    const particle = document.createElement('div');
-                    particle.className = 'clear-particle';
-                    const angle = Math.PI * i + (Math.random() - 0.5);
-                    const dist = 30 + Math.random() * 40;
-                    particle.style.cssText = `left:${centerX}px;top:${centerY}px;background:${hex};box-shadow:0 0 8px ${hex};--tx:${Math.cos(angle) * dist}px;--ty:${Math.sin(angle) * dist}px`;
-                    container.appendChild(particle);
-                    setTimeout(() => particle.remove(), 700);
-                }
             }
 
-            // Score + UI
+            // Emit particles from pool (no DOM creation)
+            for (const { centerX, centerY, color } of clearData) {
+                const hex = this.colorHex[color] || '#FFFFFF';
+                this.emitParticles(centerX, centerY, hex, 2);
+            }
+
+            // Score
             const totalScore = calculateClearScore(cellsToClear.size, totalLines);
             this.addScore(totalScore);
-
-            if (totalLines > 1) {
-                this.showComboText(totalLines);
-            }
-
             this.showScorePopup(totalScore);
 
-            // Visual cleanup after animation (matches 200ms clear-flash)
+            // Tiered effects based on clear size
+            const isCross = rows.length > 0 && cols.length > 0;
+
+            if (isCross) {
+                // Row + column cleared in same move
+                this.showComboText('CROSS!');
+                this.shakeBoard(5, 250);
+                this.showFlashOverlay('var(--accent-teal)', 250);
+            } else if (totalLines >= 4) {
+                this.showComboText('MEGA!');
+                this.shakeBoard(8, 350);
+                this.showFlashOverlay('var(--accent-orange)', 350);
+            } else if (totalLines === 3) {
+                this.showComboText('TRIPLE!');
+                this.shakeBoard(5, 250);
+            } else if (totalLines === 2) {
+                this.showComboText('DOUBLE!');
+                this.shakeBoard(3, 150);
+            }
+            // Single line: just the cell flash + particles, no combo text
+
+            // Check for board clear (all cells empty after this clear)
+            const boardEmpty = this.board.every(row => row.every(cell => !cell));
+            if (boardEmpty) {
+                this.showComboText('PERFECT!');
+                this.shakeBoard(10, 500);
+                this.showFlashOverlay('white', 400);
+            }
+
+            // Visual cleanup after animation
             setTimeout(() => {
                 for (const { cell } of clearData) {
                     cell.className = 'cell';
@@ -1054,35 +1124,98 @@ class BlockBlast {
         }
     }
 
-    showScorePopup(score) {
-        const popup = document.createElement('div');
-        popup.className = 'score-popup';
-        popup.textContent = `+${score}`;
-
-        const boardRect = this.boardElement.getBoundingClientRect();
-        popup.style.left = `${boardRect.left + boardRect.width / 2}px`;
-        popup.style.top = `${boardRect.top + boardRect.height / 2}px`;
-
-        this.effectsContainer.appendChild(popup);
-
-        setTimeout(() => popup.remove(), 800);
+    // Get a particle from the pool (cycles through, reusing oldest)
+    _getParticle() {
+        const p = this._particlePool[this._particleIndex];
+        this._particleIndex = (this._particleIndex + 1) % this._particlePool.length;
+        return p;
     }
 
-    showComboText(lines) {
-        const comboText = document.createElement('div');
-        comboText.className = 'combo-text';
-
-        if (lines === 2) {
-            comboText.textContent = 'DOUBLE!';
-        } else if (lines === 3) {
-            comboText.textContent = 'TRIPLE!';
-        } else {
-            comboText.textContent = `${lines}x COMBO!`;
+    // Emit particles at a position using the pre-created pool
+    emitParticles(centerX, centerY, hex, count = 2) {
+        for (let i = 0; i < count; i++) {
+            const p = this._getParticle();
+            if (!p) continue;
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5);
+            const dist = 25 + Math.random() * 35;
+            p.className = '';
+            p.offsetWidth; // force reflow to restart animation
+            p.style.cssText = `left:${centerX}px;top:${centerY}px;background:${hex};--tx:${Math.cos(angle) * dist}px;--ty:${Math.sin(angle) * dist}px;`;
+            p.className = 'clear-particle';
+            setTimeout(() => {
+                p.style.cssText = 'visibility:hidden;';
+                p.className = '';
+            }, 700);
         }
+    }
 
-        this.effectsContainer.appendChild(comboText);
+    // Screen shake effect
+    shakeBoard(intensity = 4, duration = 200) {
+        const board = this.boardElement.parentElement; // board-frame
+        const start = performance.now();
+        const shake = () => {
+            const elapsed = performance.now() - start;
+            if (elapsed > duration) {
+                board.style.transform = '';
+                return;
+            }
+            const decay = 1 - elapsed / duration;
+            const x = (Math.random() - 0.5) * intensity * decay;
+            const y = (Math.random() - 0.5) * intensity * decay;
+            board.style.transform = `translate(${x}px, ${y}px)`;
+            requestAnimationFrame(shake);
+        };
+        requestAnimationFrame(shake);
+    }
 
-        setTimeout(() => comboText.remove(), 700);
+    // Flash overlay for big clears
+    showFlashOverlay(color = 'white', duration = 300) {
+        const el = this._flashOverlay;
+        if (!el) return;
+        el.className = '';
+        el.offsetWidth;
+        el.style.cssText = `--flash-color:${color};--flash-duration:${duration}ms;`;
+        el.className = 'clear-flash-overlay';
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, duration);
+    }
+
+    showScorePopup(score) {
+        const el = this._scorePopup;
+        if (!el) return;
+        const cache = this.dragCache || this._layoutCache;
+        if (!cache) return;
+
+        // Reset animation by removing class, forcing reflow, re-adding
+        el.className = '';
+        el.offsetWidth; // force reflow to restart animation
+        el.textContent = `+${score}`;
+        el.style.cssText = `left:${cache.boardRect.left + cache.boardRect.width / 2}px;top:${cache.boardRect.top + cache.boardRect.height / 2}px;`;
+        el.className = 'score-popup';
+
+        // Hide after animation completes
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, 800);
+    }
+
+    showComboText(text) {
+        const el = this._comboText;
+        if (!el) return;
+
+        el.className = '';
+        el.offsetWidth; // force reflow to restart animation
+        el.textContent = String(text);
+        el.style.cssText = '';
+        el.className = 'combo-text';
+
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, 700);
     }
 
     checkGameOver() {
@@ -1219,10 +1352,8 @@ class BlockBlast {
             this.levelCompleteModal.classList.remove('active');
         }
 
-        // Clear any orphaned particle effects
-        if (this.effectsContainer) {
-            this.effectsContainer.innerHTML = '';
-        }
+        // Clear orphaned effects but preserve pre-created pool elements
+        // (they're re-created by prewarmAnimations below)
 
         this.createBoard();
 
@@ -1388,17 +1519,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.setAttribute('data-theme', newTheme);
         themeToggle.classList.toggle('active', newTheme === 'light');
         localStorage.setItem('blockRoyaleTheme', newTheme);
-
-        // Re-render board to apply new theme colours to filled cells
         if (window.game && window.game.board) {
             for (let r = 0; r < window.game.boardSize; r++) {
                 for (let c = 0; c < window.game.boardSize; c++) {
                     const cell = window.game.getCellElement(r, c);
                     if (cell) {
-                        // Force CSS recalculation by removing and re-adding filled state
                         if (window.game.board[r][c]) {
-                            const color = window.game.board[r][c];
-                            cell.className = 'cell filled color-' + color;
+                            cell.className = 'cell filled color-' + window.game.board[r][c];
                         } else {
                             cell.className = 'cell';
                         }

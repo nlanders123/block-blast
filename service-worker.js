@@ -1,4 +1,4 @@
-const CACHE_NAME = 'block-royale-v5';
+const CACHE_NAME = 'block-royale-v6';
 const ASSETS = [
     './',
     './index.html',

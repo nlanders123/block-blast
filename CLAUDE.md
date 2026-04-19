@@ -11,15 +11,16 @@ Jelly-themed block puzzle game. Place shapes on an 8x8 grid, clear lines to scor
 
 ## Project Structure
 ```
-game.js          — Game engine (BlockBlast class, SoundManager, LeaderboardManager, ThemeManager)
-levels.js        — LevelManager (50 levels, currently disabled — endless mode only)
+game.js          — Game engine (BlockRoyale class, SoundManager, LeaderboardManager)
+game-logic.js    — Pure game logic functions (no DOM, testable with Jest)
 index.html       — Single page app
 style.css        — All styles, CSS custom properties for theming
-service-worker.js — Basic offline caching
+service-worker.js — Basic offline caching (network-first)
 capacitor.config.json — iOS/Android wrapper config
 ios/             — Capacitor iOS project
 www/             — Capacitor web build output
 assets/          — Game assets
+levels.js        — LevelManager (50 levels, currently unused — kept for future)
 ```
 
 ## Key Conventions
@@ -37,10 +38,9 @@ npm run cap:open:ios  # Open Xcode
 ```
 
 ## Known Issues
-- Package name says "line-crush", class says "BlockBlast" — rename to Block Royale pending
 - Capacitor v5 needs upgrading to v6
-- Level system exists but is disabled (endless mode only)
 - Icons are placeholder (579KB PNGs — need proper app icons)
+- Google Fonts won't work offline — consider self-hosting for full PWA offline support
 
 ## Rules
 - Test on mobile after any drag/touch changes — desktop mouse ≠ mobile touch

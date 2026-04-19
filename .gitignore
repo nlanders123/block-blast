@@ -1,2 +1,4 @@
 node_modules/
 .vercel
+*.bak
+*.pre-v2.bak

@@ -8,6 +8,7 @@ class SoundManager {
         this.audioContext = null;
         this.enabled = true;
         this.initialized = false;
+        this.unlocked = false;
     }
 
     init() {
@@ -15,10 +16,35 @@ class SoundManager {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.initialized = true;
+            // Immediately attempt resume — this must run inside a user gesture
+            // handler for iOS Safari to unlock the AudioContext.
+            this._unlock();
         } catch (e) {
             console.warn('Web Audio API not supported');
             this.enabled = false;
         }
+    }
+
+    /**
+     * Unlock iOS Safari audio by resuming the context and playing a silent
+     * buffer. iOS requires both resume() AND an audible buffer-source start
+     * within the same user gesture call stack to fully unlock audio.
+     */
+    _unlock() {
+        if (this.unlocked || !this.audioContext) return;
+        const ctx = this.audioContext;
+        // Resume returns a promise; we don't await it but it begins the unlock
+        const p = ctx.resume();
+        // Play a silent buffer to fully unlock on iOS Safari
+        const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        source.onended = () => {
+            this.unlocked = true;
+        };
+        if (p) p.then(() => { this.unlocked = true; });
     }
 
     play(type) {
@@ -95,7 +121,7 @@ class SoundManager {
  */
 class LeaderboardManager {
     constructor() {
-        this.storageKey = 'blockBlastLeaderboard';
+        this.storageKey = 'blockRoyaleLeaderboard';
         this.maxEntries = 10;
     }
 
@@ -150,70 +176,7 @@ class LeaderboardManager {
     }
 }
 
-/**
- * Theme Manager - Light/Dark/System theme support
- */
-class ThemeManager {
-    constructor() {
-        this.storageKey = 'blockBlastTheme';
-        this.currentTheme = 'system';
-        this.init();
-    }
-
-    init() {
-        const saved = this.getSavedTheme();
-        this.setTheme(saved || 'system');
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-            if (this.currentTheme === 'system') {
-                this.applyTheme();
-            }
-        });
-    }
-
-    getSavedTheme() {
-        try {
-            return localStorage.getItem(this.storageKey);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    setTheme(theme) {
-        this.currentTheme = theme;
-        try {
-            localStorage.setItem(this.storageKey, theme);
-        } catch (e) {
-            console.warn('Could not save theme preference');
-        }
-        this.applyTheme();
-    }
-
-    applyTheme() {
-        let effectiveTheme = this.currentTheme;
-
-        if (effectiveTheme === 'system') {
-            effectiveTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        }
-
-        document.documentElement.setAttribute('data-theme', effectiveTheme);
-    }
-
-    toggle() {
-        const themes = ['dark', 'light', 'system'];
-        const currentIndex = themes.indexOf(this.currentTheme);
-        const nextIndex = (currentIndex + 1) % themes.length;
-        this.setTheme(themes[nextIndex]);
-        return themes[nextIndex];
-    }
-
-    getThemeName() {
-        return this.currentTheme.charAt(0).toUpperCase() + this.currentTheme.slice(1);
-    }
-}
-
-class BlockBlast {
+class BlockRoyale {
     constructor() {
         // Game state
         this.board = [];
@@ -221,7 +184,6 @@ class BlockBlast {
         this.score = 0;
         this.highScore = 0;
         this.pieces = [null, null, null];
-        this.history = [];
         this.maxHistory = 1;
         this.isPaused = false;
         this.isGameOver = false;
@@ -244,6 +206,7 @@ class BlockBlast {
 
         // Settings
         this.hapticsEnabled = true;
+        this.pieceMode = 'tray';
 
         // Colors with hex values for particles
         this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green', 'yellow'];
@@ -263,35 +226,6 @@ class BlockBlast {
         // Leaderboard Manager
         this.leaderboard = new LeaderboardManager();
 
-        // Theme Manager
-        this.theme = new ThemeManager();
-
-        // Level Manager (New)
-        this.levelManager = new LevelManager();
-
-        // Piece shapes
-        this.shapes = [
-            { shape: [[1]], name: '1x1' },
-            { shape: [[1, 1]], name: '1x2' },
-            { shape: [[1], [1]], name: '2x1' },
-            { shape: [[1, 1, 1]], name: '1x3' },
-            { shape: [[1], [1], [1]], name: '3x1' },
-            { shape: [[1, 1, 1, 1]], name: '1x4' },
-            { shape: [[1], [1], [1], [1]], name: '4x1' },
-            { shape: [[1, 1], [1, 1]], name: '2x2' },
-            { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], name: '3x3' },
-            { shape: [[1, 0], [1, 0], [1, 1]], name: 'L1' },
-            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L2' },
-            { shape: [[1, 1], [0, 1], [0, 1]], name: 'L3' },
-            { shape: [[0, 0, 1], [1, 1, 1]], name: 'L4' },
-            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T1' },
-            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T2' },
-            { shape: [[0, 1, 0], [1, 1, 1]], name: 'T3' },
-            { shape: [[0, 1], [1, 1], [0, 1]], name: 'T4' },
-            { shape: [[1, 1, 0], [0, 1, 1]], name: 'Z1' },
-            { shape: [[0, 1, 1], [1, 1, 0]], name: 'Z2' },
-        ];
-
         // DOM elements
         this.boardElement = document.getElementById('gameBoard');
         this.pieceSlotsElement = document.getElementById('pieceSlots');
@@ -303,15 +237,13 @@ class BlockBlast {
         this.modalHighScoreElement = document.getElementById('modalHighScore');
         this.newHighScoreElement = document.getElementById('newHighScore');
         this.effectsContainer = document.getElementById('effectsContainer');
+        this.trayLabelElement = document.getElementById('trayLabel');
+        this.trayHelpElement = document.getElementById('trayHelp');
+        this.trayBadgeElement = document.getElementById('trayBadge');
 
         // Leaderboard elements
         this.leaderboardModal = document.getElementById('leaderboardModal');
         this.leaderboardList = document.getElementById('leaderboardList');
-        this.themeBtn = document.getElementById('themeBtn');
-        this.themeBtnLabel = document.getElementById('themeBtnLabel');
-
-        // Level Complete Modal
-        this.levelCompleteModal = document.getElementById('levelCompleteModal');
 
         this.init();
     }
@@ -397,7 +329,7 @@ class BlockBlast {
 
     loadHighScore() {
         try {
-            const saved = localStorage.getItem('blockBlastHighScore');
+            const saved = localStorage.getItem('blockRoyaleHighScore');
             this.highScore = saved ? parseInt(saved, 10) : 0;
         } catch (e) {
             this.highScore = 0;
@@ -407,7 +339,7 @@ class BlockBlast {
 
     saveHighScore() {
         try {
-            localStorage.setItem('blockBlastHighScore', this.highScore.toString());
+            localStorage.setItem('blockRoyaleHighScore', this.highScore.toString());
         } catch (e) {
             console.warn('Could not save high score');
         }
@@ -427,6 +359,49 @@ class BlockBlast {
             return true;
         }
         return false;
+    }
+
+    setPieceMode(mode) {
+        this.pieceMode = mode === 'single' ? 'single' : 'tray';
+        this.fillPieceQueue();
+        this.updatePieceTrayUi();
+        this.renderPieces();
+        this.checkGameOver();
+    }
+
+    fillPieceQueue() {
+        const queue = this.pieces.filter(Boolean);
+        while (queue.length < 3) {
+            queue.push(this.getRandomPiece());
+        }
+        this.pieces = queue.slice(0, 3);
+    }
+
+    getVisiblePieces() {
+        if (this.pieceMode === 'single') {
+            return this.pieces[0] ? [this.pieces[0]] : [];
+        }
+        return this.pieces.filter(Boolean);
+    }
+
+    updatePieceTrayUi() {
+        const isSinglePieceMode = this.pieceMode === 'single';
+
+        this.pieceSlotsElement?.classList.toggle('single-piece-mode', isSinglePieceMode);
+
+        if (this.trayLabelElement) {
+            this.trayLabelElement.textContent = isSinglePieceMode ? 'Current Piece' : 'Next Pieces';
+        }
+
+        if (this.trayHelpElement) {
+            this.trayHelpElement.textContent = isSinglePieceMode
+                ? 'Place it to reveal the next shape.'
+                : 'Place all three to draw a fresh set.';
+        }
+
+        if (this.trayBadgeElement) {
+            this.trayBadgeElement.textContent = isSinglePieceMode ? '1 at a time' : '3 at a time';
+        }
     }
 
     createBoard() {
@@ -503,10 +478,6 @@ class BlockBlast {
             this.sound.play('button');
             this.togglePause();
         });
-        document.getElementById('undoBtn').addEventListener('click', () => {
-            this.sound.play('button');
-            this.undo();
-        });
         document.getElementById('resumeBtn').addEventListener('click', () => {
             this.sound.play('button');
             this.togglePause();
@@ -527,15 +498,6 @@ class BlockBlast {
 
         // Home button is handled by the start screen controller in the DOMContentLoaded block
 
-        // Level Complete Next Button
-        const nextLevelBtn = document.getElementById('nextLevelBtn');
-        if (nextLevelBtn) {
-            nextLevelBtn.addEventListener('click', () => {
-                this.sound.play('button');
-                this.loadNextLevel();
-            });
-        }
-
         // Leaderboard button
         const leaderboardBtn = document.getElementById('leaderboardBtn');
         if (leaderboardBtn) {
@@ -554,14 +516,6 @@ class BlockBlast {
             });
         }
 
-        // Theme toggle button
-        if (this.themeBtn) {
-            this.themeBtn.addEventListener('click', () => {
-                this.sound.play('button');
-                this.theme.toggle();
-                this.updateThemeButtonLabel();
-            });
-        }
     }
 
     getEventPosition(e) {
@@ -710,7 +664,7 @@ class BlockBlast {
 
         const cloneW = cols * cellSize + (cols - 1) * gap;
         const cloneH = rows * cellSize + (rows - 1) * gap;
-        const offsetY = isMobile ? stride * 1.5 : 0;
+        const offsetY = isMobile ? stride * 3 : 0;
 
         this.dragClone.style.left = `${x - cloneW / 2}px`;
         this.dragClone.style.top = `${y - offsetY - cloneH / 2}px`;
@@ -779,7 +733,7 @@ class BlockBlast {
         if (!this.draggingPiece || !this.dragCache) return;
 
         const { boardRect, stride, isMobile } = this.dragCache;
-        const offsetY = isMobile ? stride * 1.5 : 0;
+        const offsetY = isMobile ? stride * 3 : 0;
 
         const shape = this.draggingPiece.shape;
         const pieceW = shape[0].length;
@@ -790,8 +744,8 @@ class BlockBlast {
         const centerRow = (y - offsetY - boardRect.top) / stride;
 
         // If finger is well below the board (back near the tray), cancel placement.
-        // Must account for the mobile Y offset (stride * 1.5) — targeting the bottom
-        // row puts the finger ~2 strides below the board edge.
+        // Must account for the mobile Y offset (stride * 3) — targeting the bottom
+        // row puts the finger well below the board edge.
         const boardBottom = boardRect.top + boardRect.height;
         if (y > boardBottom + stride * 3) {
             this.clearHighlight();
@@ -858,14 +812,45 @@ class BlockBlast {
                 }
             }
         }
+
+        // Line-clear preview: highlight rows/cols that would complete
+        if (canPlace) {
+            const { rows: clearRows, cols: clearCols } = previewLinesToClear(
+                this.board, this.draggingPiece, row, col
+            );
+
+            for (const clearRow of clearRows) {
+                for (let c = 0; c < this.boardSize; c++) {
+                    const cell = this.getCellElement(clearRow, c);
+                    if (cell && !cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                        this.currentHighlight.push({ cell, addedClass: 'line-clear-preview' });
+                    } else if (cell && cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                    }
+                }
+            }
+
+            for (const clearCol of clearCols) {
+                for (let r = 0; r < this.boardSize; r++) {
+                    const cell = this.getCellElement(r, clearCol);
+                    if (cell && !cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                        this.currentHighlight.push({ cell, addedClass: 'line-clear-preview' });
+                    } else if (cell && cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                    }
+                }
+            }
+        }
     }
 
     clearHighlight() {
         for (let i = 0; i < this.currentHighlight.length; i++) {
             const { cell, addedClass } = this.currentHighlight[i];
-            cell.classList.remove('highlight', 'invalid', 'preview-piece');
+            cell.classList.remove('highlight', 'invalid', 'preview-piece', 'line-clear-preview');
             // Only remove color from non-placed cells — placed blocks keep their color
-            if (addedClass && !cell.classList.contains('filled')) {
+            if (addedClass && addedClass !== 'line-clear-preview' && !cell.classList.contains('filled')) {
                 cell.classList.remove(addedClass);
             }
         }
@@ -881,7 +866,6 @@ class BlockBlast {
     }
 
     placePiece(piece, startRow, startCol, pieceIndex) {
-        this.saveState();
         this.sound.play('place');
 
         const blockCount = placePieceOnBoard(this.board, piece, startRow, startCol);
@@ -899,14 +883,16 @@ class BlockBlast {
 
         this.addScore(blockCount);
         this.pieces[pieceIndex] = null;
-        this.renderPieces();
-
-        this.checkAndClearLines();
-
-        if (this.pieces.every(p => p === null)) {
+        if (this.pieceMode === 'single') {
+            this.fillPieceQueue();
+            this.renderPieces();
+        } else if (this.pieces.every(p => p === null)) {
             this.generateNewPieces();
+        } else {
+            this.renderPieces();
         }
 
+        this.checkAndClearLines();
         this.checkGameOver();
     }
 
@@ -998,18 +984,12 @@ class BlockBlast {
     }
 
     generateNewPieces() {
-        // Difficulty Tuning: Easier pieces in early levels or lower scores
-        // Simple heuristic: If level < 5, reduce complex shapes
-        const isEasy = this.levelManager && this.levelManager.currentLevel <= 5;
-
-        for (let i = 0; i < 3; i++) {
-            this.pieces[i] = this.getRandomPiece(isEasy);
-        }
+        this.pieces = [this.getRandomPiece(), this.getRandomPiece(), this.getRandomPiece()];
         this.renderPieces();
     }
 
-    getRandomPiece(isEasy = false) {
-        const shapes = this.getShapes(isEasy);
+    getRandomPiece() {
+        const shapes = this.getShapes();
         const shapeData = shapes[Math.floor(Math.random() * shapes.length)];
         const colors = this.colors;
         const color = colors[Math.floor(Math.random() * colors.length)];
@@ -1021,37 +1001,69 @@ class BlockBlast {
         };
     }
 
-    getShapes(isEasy) {
-        // Basic shapes
-        const easyShapes = [
+    getShapes() {
+        return [
+            // Singles & lines
             { shape: [[1]], name: '1x1' },
             { shape: [[1, 1]], name: '1x2_h' },
             { shape: [[1], [1]], name: '1x2_v' },
-            { shape: [[1, 1], [1, 1]], name: '2x2' },
             { shape: [[1, 1, 1]], name: '1x3_h' },
             { shape: [[1], [1], [1]], name: '1x3_v' },
-            { shape: [[1, 1], [1, 0]], name: 'L_small' }
-        ];
-
-        const hardShapes = [
             { shape: [[1, 1, 1, 1]], name: '1x4_h' },
             { shape: [[1], [1], [1], [1]], name: '1x4_v' },
-            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T_up' },
-            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T_left' },
-            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L_large' },
-            { shape: [[1, 1, 0], [0, 1, 1]], name: 'Z_shape' },
-            { shape: [[1, 1, 1], [1, 1, 1]], name: '2x3' }
-        ];
+            { shape: [[1, 1, 1, 1, 1]], name: '1x5_h' },
+            { shape: [[1], [1], [1], [1], [1]], name: '1x5_v' },
 
-        if (isEasy) return [...easyShapes, ...easyShapes, ...hardShapes]; // Weigh easy shapes higher
-        return [...easyShapes, ...hardShapes];
+            // Squares
+            { shape: [[1, 1], [1, 1]], name: '2x2' },
+            { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], name: '3x3' },
+
+            // Rectangles
+            { shape: [[1, 1, 1], [1, 1, 1]], name: '2x3_h' },
+            { shape: [[1, 1], [1, 1], [1, 1]], name: '2x3_v' },
+
+            // L-shapes (small — 2x2, all 4 orientations)
+            { shape: [[1, 1], [1, 0]], name: 'L2_a' },
+            { shape: [[1, 0], [1, 1]], name: 'L2_b' },
+            { shape: [[0, 1], [1, 1]], name: 'L2_c' },
+            { shape: [[1, 1], [0, 1]], name: 'L2_d' },
+
+            // L-shapes (large — 3 cells long, all 4 orientations)
+            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L3_a' },
+            { shape: [[1, 1, 1], [0, 0, 1]], name: 'L3_b' },
+            { shape: [[1, 0], [1, 0], [1, 1]], name: 'L3_c' },
+            { shape: [[0, 1], [0, 1], [1, 1]], name: 'L3_d' },
+            { shape: [[1, 0, 0], [1, 1, 1]], name: 'L3_e' },
+            { shape: [[0, 0, 1], [1, 1, 1]], name: 'L3_f' },
+            { shape: [[1, 1], [0, 1], [0, 1]], name: 'L3_g' },
+            { shape: [[1, 1], [1, 0], [1, 0]], name: 'L3_h' },
+
+            // T-shapes (all 4 orientations)
+            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T_up' },
+            { shape: [[0, 1, 0], [1, 1, 1]], name: 'T_down' },
+            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T_right' },
+            { shape: [[0, 1], [1, 1], [0, 1]], name: 'T_left' },
+
+            // S/Z shapes (both orientations)
+            { shape: [[1, 1, 0], [0, 1, 1]], name: 'S_h' },
+            { shape: [[0, 1, 1], [1, 1, 0]], name: 'Z_h' },
+            { shape: [[0, 1], [1, 1], [1, 0]], name: 'S_v' },
+            { shape: [[1, 0], [1, 1], [0, 1]], name: 'Z_v' },
+        ];
     }
 
     renderPieces() {
         const slots = this.pieceSlotsElement.querySelectorAll('.piece-slot');
+        const isSinglePieceMode = this.pieceMode === 'single';
 
         slots.forEach((slot, index) => {
+            const hideSlot = isSinglePieceMode && index > 0;
+            slot.classList.toggle('is-hidden-slot', hideSlot);
+            slot.classList.toggle('is-primary-slot', isSinglePieceMode && index === 0);
+            slot.setAttribute('aria-hidden', hideSlot ? 'true' : 'false');
             slot.innerHTML = '';
+
+            if (hideSlot) return;
 
             const piece = this.pieces[index];
             if (!piece) return;
@@ -1080,39 +1092,6 @@ class BlockBlast {
     addScore(points) {
         this.score += points;
         this.updateScore();
-        // Levels disabled - endless mode only
-        // this.checkLevelProgress();
-    }
-
-    checkLevelProgress() {
-        if (!this.levelCompleteModal) return; // Guard against missing element
-
-        const currentLevel = this.levelManager.getCurrentLevelData();
-        if (this.score >= currentLevel.targetScore) {
-            // Level Complete!
-            this.sound.play('newHighScore'); // Use positive sound
-            const levelScoreEl = document.getElementById('levelScore');
-            if (levelScoreEl) levelScoreEl.textContent = this.score;
-            this.levelCompleteModal.classList.add('active');
-        }
-    }
-
-    loadNextLevel() {
-        if (this.levelCompleteModal) {
-            this.levelCompleteModal.classList.remove('active');
-        }
-        if (this.levelManager.nextLevel()) {
-            this.newGame(true); // Keep score? Or reset? Usually puzzle games reset board but keep score accumulation?
-            // Actually, "50 levels" implies clearing board. Let's clear board but maybe keep score or reset target.
-            // Let's reset board but keep total score for "Endless" feel with stages. 
-            // Wait, newGame() resets pieces.
-            // Let's just call startLevel() logic.
-        } else {
-            // All levels done? Loop or endless.
-            alert("You beat all 50 levels! Restarting at 1.");
-            this.levelManager.currentLevel = 1;
-            this.newGame();
-        }
     }
 
     updateScore() {
@@ -1219,7 +1198,7 @@ class BlockBlast {
     }
 
     checkGameOver() {
-        const availablePieces = this.pieces.filter(p => p !== null);
+        const availablePieces = this.getVisiblePieces();
 
         if (availablePieces.length > 0 && !hasValidMove(this.board, availablePieces)) {
             this.gameOver();
@@ -1246,6 +1225,17 @@ class BlockBlast {
         }
 
         this.gameOverModal.classList.add('active');
+
+        // Switch to game over screen colours
+        document.documentElement.classList.remove('screen-game');
+        document.documentElement.classList.add('screen-gameover');
+        const cBg = document.querySelector('.cosmic-bg');
+        if (cBg) { cBg.classList.remove('bg-game'); cBg.classList.add('bg-gameover'); }
+        const m1 = document.querySelector('meta[name="theme-color"]');
+        if (m1) m1.remove();
+        const m1n = document.createElement('meta');
+        m1n.name = 'theme-color'; m1n.content = '#E8765A';
+        document.head.appendChild(m1n);
     }
 
     showLeaderboard() {
@@ -1267,7 +1257,11 @@ class BlockBlast {
 
                 const rankEl = document.createElement('span');
                 rankEl.className = 'leaderboard-rank';
-                rankEl.textContent = index === 0 ? '🏆' : `#${index + 1}`;
+                if (index === 0) {
+                    rankEl.innerHTML = '<span class="icon" style="color: #facc15;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9A6 6 0 0018 9V4H6V9z"/><path d="M6 5H4a1 1 0 00-1 1v1.5A3.5 3.5 0 006.5 11H7"/><path d="M18 5h2a1 1 0 011 1v1.5A3.5 3.5 0 0117.5 11H17"/><line x1="12" y1="15" x2="12" y2="18"/><path d="M8 21h8"/><path d="M8 21l1-3h6l1 3"/></svg></span>';
+                } else {
+                    rankEl.textContent = `#${index + 1}`;
+                }
 
                 const scoreEl = document.createElement('span');
                 scoreEl.className = 'leaderboard-score';
@@ -1293,87 +1287,36 @@ class BlockBlast {
         }
     }
 
-    updateThemeButtonLabel() {
-        if (this.themeBtnLabel) {
-            this.themeBtnLabel.textContent = this.theme.getThemeName();
-        }
-    }
-
     togglePause() {
         this.isPaused = !this.isPaused;
         this.pauseModal.classList.toggle('active', this.isPaused);
-    }
-
-    saveState() {
-        const state = {
-            board: this.board.map(row => [...row]),
-            score: this.score,
-            pieces: this.pieces.map(p => p ? { ...p, shape: p.shape.map(r => [...r]) } : null)
-        };
-
-        this.history = [state];
-    }
-
-    undo() {
-        if (this.history.length === 0) return;
-
-        const state = this.history.pop();
-        this.board = state.board;
-        this.score = state.score;
-        this.pieces = state.pieces;
-
-        for (let row = 0; row < this.boardSize; row++) {
-            for (let col = 0; col < this.boardSize; col++) {
-                const cell = this.getCellElement(row, col);
-                cell.className = 'cell';
-
-                if (this.board[row][col]) {
-                    cell.classList.add('filled', `color-${this.board[row][col]}`);
-                }
-            }
-        }
-
-        this.updateScore();
-        this.renderPieces();
     }
 
     newGame(keepScore = false) {
         this.board = [];
         if (!keepScore) this.score = 0;
         this.pieces = [null, null, null];
-        this.history = [];
         this.isGameOver = false;
         this.isPaused = false;
 
         this.gameOverModal.classList.remove('active');
         this.pauseModal.classList.remove('active');
         this.newHighScoreElement.classList.remove('show');
-        if (this.levelCompleteModal) {
-            this.levelCompleteModal.classList.remove('active');
-        }
 
-        // Clear orphaned effects but preserve pre-created pool elements
-        // (they're re-created by prewarmAnimations below)
+        // Restore game screen colours
+        document.documentElement.classList.remove('screen-gameover');
+        document.documentElement.classList.add('screen-game');
+        const cBg2 = document.querySelector('.cosmic-bg');
+        if (cBg2) { cBg2.classList.remove('bg-gameover'); cBg2.classList.add('bg-game'); }
+        const m2 = document.querySelector('meta[name="theme-color"]');
+        if (m2) m2.remove();
+        const m2n = document.createElement('meta');
+        m2n.name = 'theme-color'; m2n.content = '#F5F3F0';
+        document.head.appendChild(m2n);
 
         this.createBoard();
-
-        // Levels disabled - no obstacles placed (endless mode)
-        // const levelData = this.levelManager.getCurrentLevelData();
-        // if (levelData && levelData.obstaclePattern) {
-        //     levelData.obstaclePattern.forEach(pos => {
-        //         if (pos.r < this.boardSize && pos.c < this.boardSize) {
-        //             this.board[pos.r][pos.c] = 'grey';
-        //             const cell = this.getCellElement(pos.r, pos.c);
-        //             if (cell) cell.classList.add('filled', 'obstacle');
-        //         }
-        //     });
-        // }
-
         this.generateNewPieces();
         this.updateScore();
-
-        // Show Level Toast/Indicator (Optional)
-        // console.log("Started Level " + levelData.id);
     }
 }
 
@@ -1382,10 +1325,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const startScreen = document.getElementById('startScreen');
     const gameContainer = document.getElementById('gameContainer');
     const startHighScore = document.getElementById('startHighScore');
+    const privacyModal = document.getElementById('privacyModal');
 
     // Load high score for start screen display
     try {
-        const saved = localStorage.getItem('blockBlastHighScore');
+        const saved = localStorage.getItem('blockRoyaleHighScore');
         if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
     } catch (e) {}
 
@@ -1393,15 +1337,47 @@ document.addEventListener('DOMContentLoaded', () => {
     const settings = {
         sound: localStorage.getItem('blockRoyaleSound') !== 'false',
         haptics: localStorage.getItem('blockRoyaleHaptics') !== 'false',
+        pieceMode: localStorage.getItem('blockRoyalePieceMode') === 'single' ? 'single' : 'tray',
     };
+
+    const cosmicBg = document.querySelector('.cosmic-bg');
+    const themeMetaTag = document.querySelector('meta[name="theme-color"]');
+
+    function setScreenBg(screen) {
+        const root = document.documentElement;
+        root.classList.remove('screen-game', 'screen-gameover');
+        cosmicBg.classList.remove('bg-game', 'bg-gameover');
+
+        let color;
+        if (screen === 'game') {
+            root.classList.add('screen-game');
+            cosmicBg.classList.add('bg-game');
+            color = '#F5F3F0';
+        } else if (screen === 'gameover') {
+            root.classList.add('screen-gameover');
+            cosmicBg.classList.add('bg-gameover');
+            color = '#E8765A';
+        } else {
+            color = '#2D6A4F';
+        }
+
+        // Force Safari to update browser chrome by removing and re-inserting theme-color
+        const old = document.querySelector('meta[name="theme-color"]');
+        if (old) old.remove();
+        const meta = document.createElement('meta');
+        meta.name = 'theme-color';
+        meta.content = color;
+        document.head.appendChild(meta);
+    }
 
     function showStartScreen() {
         startScreen.classList.remove('hidden');
         gameContainer.style.display = 'none';
+        setScreenBg('start');
 
         // Update high score on start screen
         try {
-            const saved = localStorage.getItem('blockBlastHighScore');
+            const saved = localStorage.getItem('blockRoyaleHighScore');
             if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
         } catch (e) {}
     }
@@ -1410,16 +1386,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Init and unlock audio on this user gesture (must happen synchronously within tap)
         if (window.game && window.game.sound) {
             window.game.sound.init();
-            if (window.game.sound.audioContext) {
-                // Resume must be called synchronously in the gesture, not in a .then()
-                window.game.sound.audioContext.resume();
-                // Play an audible "start" tone to unlock iOS audio AND give feedback
-                window.game.sound.play('button');
-            }
+            // _unlock() was called by init(), now play feedback tone
+            window.game.sound.play('button');
         }
 
         startScreen.classList.add('hidden');
         gameContainer.style.display = 'flex';
+        setScreenBg('game');
 
         // Force a synchronous layout so getBoundingClientRect() works immediately
         // This is cheaper than double-rAF and doesn't delay interaction
@@ -1436,11 +1409,41 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Create game instance
-    window.game = new BlockBlast();
+    window.game = new BlockRoyale();
+
+    // Lightweight hooks for smoke testing and release verification.
+    window.render_game_to_text = () => {
+        const visiblePieces = window.game?.getVisiblePieces?.() ?? [];
+        const totalQueuedPieces = window.game?.pieces?.filter(Boolean).length ?? 0;
+
+        return JSON.stringify({
+            screen: startScreen.classList.contains('hidden') ? 'game' : 'start',
+            score: window.game?.score ?? 0,
+            highScore: window.game?.highScore ?? 0,
+            pieceMode: window.game?.pieceMode ?? 'tray',
+            piecesRemaining: visiblePieces.length,
+            hiddenQueueCount: Math.max(0, totalQueuedPieces - visiblePieces.length),
+            pieces: visiblePieces.map(piece => piece ? {
+                color: piece.color,
+                rows: piece.shape.length,
+                cols: piece.shape[0].length
+            } : null),
+            boardTopRows: (window.game?.board ?? []).slice(0, 3).map(row => row.map(cell => cell ? cell[0] : '.').join('')),
+            modals: {
+                pause: window.game?.pauseModal?.classList.contains('active') ?? false,
+                gameOver: window.game?.gameOverModal?.classList.contains('active') ?? false,
+                leaderboard: window.game?.leaderboardModal?.classList.contains('active') ?? false,
+                settings: document.getElementById('settingsModal')?.classList.contains('active') ?? false,
+                privacy: privacyModal?.classList.contains('active') ?? false,
+            }
+        });
+    };
+    window.advanceTime = (ms = 16) => new Promise(resolve => setTimeout(resolve, ms));
 
     // Apply saved settings
     window.game.sound.enabled = settings.sound;
     window.game.hapticsEnabled = settings.haptics;
+    window.game.setPieceMode(settings.pieceMode);
 
     // Hide game container on load (start screen is visible)
     gameContainer.style.display = 'none';
@@ -1451,14 +1454,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Home button → back to start screen
     const homeBtn = document.getElementById('homeBtn');
     if (homeBtn) {
-        homeBtn.removeEventListener('click', homeBtn._handler);
-        homeBtn._handler = () => {
+        homeBtn.addEventListener('click', () => {
             window.game.sound.play('button');
             window.game.gameOverModal.classList.remove('active');
             window.game.isGameOver = false;
             showStartScreen();
-        };
-        homeBtn.addEventListener('click', homeBtn._handler);
+        });
     }
 
     // Leaderboard from start screen
@@ -1466,9 +1467,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.game.showLeaderboard();
     });
 
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettings = ({ resumeGame = false } = {}) => {
+        if (resumeGame && window.game) {
+            window.game.isPaused = false;
+            window.game.pauseModal.classList.remove('active');
+        }
+        settingsModal.classList.add('active');
+    };
+
     // Settings from start screen
     document.getElementById('startSettingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.add('active');
+        openSettings();
     });
 
     // Settings from pause menu
@@ -1476,15 +1486,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (settingsBtn) {
         settingsBtn.addEventListener('click', () => {
             window.game.sound.play('button');
-            window.game.pauseModal.classList.remove('active');
-            document.getElementById('settingsModal').classList.add('active');
+            openSettings({ resumeGame: true });
         });
     }
 
     // Close settings
     document.getElementById('closeSettingsBtn').addEventListener('click', () => {
-        document.getElementById('settingsModal').classList.remove('active');
+        settingsModal.classList.remove('active');
     });
+
+    const privacyPolicyBtn = document.getElementById('privacyPolicyBtn');
+    if (privacyPolicyBtn && privacyModal) {
+        privacyPolicyBtn.addEventListener('click', () => {
+            window.game.sound.play('button');
+            privacyModal.classList.add('active');
+        });
+    }
+
+    const closePrivacyBtn = document.getElementById('closePrivacyBtn');
+    if (closePrivacyBtn && privacyModal) {
+        closePrivacyBtn.addEventListener('click', () => {
+            privacyModal.classList.remove('active');
+        });
+    }
 
     // Sound toggle
     const soundToggle = document.getElementById('soundToggle');
@@ -1506,117 +1530,97 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('blockRoyaleHaptics', settings.haptics);
     });
 
-    // Theme toggle (light/dark)
-    const themeToggle = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('blockRoyaleTheme') || 'dark';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    if (savedTheme === 'light') {
-        themeToggle.classList.add('active');
-    }
-    themeToggle.addEventListener('click', () => {
-        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-        const newTheme = isLight ? 'dark' : 'light';
-        document.documentElement.setAttribute('data-theme', newTheme);
-        themeToggle.classList.toggle('active', newTheme === 'light');
-        localStorage.setItem('blockRoyaleTheme', newTheme);
-        if (window.game && window.game.board) {
-            for (let r = 0; r < window.game.boardSize; r++) {
-                for (let c = 0; c < window.game.boardSize; c++) {
-                    const cell = window.game.getCellElement(r, c);
-                    if (cell) {
-                        if (window.game.board[r][c]) {
-                            cell.className = 'cell filled color-' + window.game.board[r][c];
-                        } else {
-                            cell.className = 'cell';
-                        }
-                    }
-                }
-            }
-        }
+    // Single-piece draw toggle
+    const pieceModeToggle = document.getElementById('pieceModeToggle');
+    const syncPieceModeToggle = () => {
+        const isSinglePieceMode = settings.pieceMode === 'single';
+        pieceModeToggle.classList.toggle('active', isSinglePieceMode);
+        pieceModeToggle.setAttribute('aria-pressed', String(isSinglePieceMode));
+    };
+    syncPieceModeToggle();
+    pieceModeToggle.addEventListener('click', () => {
+        settings.pieceMode = settings.pieceMode === 'single' ? 'tray' : 'single';
+        syncPieceModeToggle();
+        window.game.setPieceMode(settings.pieceMode);
+        localStorage.setItem('blockRoyalePieceMode', settings.pieceMode);
     });
 
-    // Clear data
+    // Clear data — uses confirm modal instead of native confirm()
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmYesBtn = document.getElementById('confirmYes');
+    const confirmNoBtn = document.getElementById('confirmNo');
+
     document.getElementById('clearDataBtn').addEventListener('click', () => {
-        if (confirm('Clear all scores and settings?')) {
-            localStorage.removeItem('blockBlastHighScore');
-            localStorage.removeItem('blockBlastLeaderboard');
-            localStorage.removeItem('blockRoyaleTutorialDone');
-            localStorage.removeItem('blockRoyaleSound');
-            localStorage.removeItem('blockRoyaleHaptics');
-            localStorage.removeItem('blockRoyaleTheme');
-            document.documentElement.removeAttribute('data-theme');
-            themeToggle.classList.remove('active');
-            window.game.highScore = 0;
-            window.game.updateHighScoreDisplay();
-            window.game.leaderboard.clearScores();
-            if (startHighScore) startHighScore.textContent = '0';
-            document.getElementById('settingsModal').classList.remove('active');
-        }
+        confirmModal.classList.add('active');
+    });
+
+    confirmNoBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+    });
+
+    confirmYesBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+        localStorage.removeItem('blockRoyaleHighScore');
+        localStorage.removeItem('blockRoyaleLeaderboard');
+        localStorage.removeItem('blockRoyaleTutorialDone');
+        localStorage.removeItem('blockRoyaleSound');
+        localStorage.removeItem('blockRoyaleHaptics');
+        localStorage.removeItem('blockRoyalePieceMode');
+        settings.sound = true;
+        settings.haptics = true;
+        settings.pieceMode = 'tray';
+        soundToggle.classList.add('active');
+        hapticsToggle.classList.add('active');
+        syncPieceModeToggle();
+        window.game.sound.enabled = true;
+        window.game.hapticsEnabled = true;
+        window.game.setPieceMode(settings.pieceMode);
+        window.game.highScore = 0;
+        window.game.updateHighScoreDisplay();
+        window.game.leaderboard.clearScores();
+        if (startHighScore) startHighScore.textContent = '0';
+        document.getElementById('settingsModal').classList.remove('active');
     });
 
     // =====================================================
-    // TUTORIAL
+    // TUTORIAL — ANIMATED HAND
     // =====================================================
-    const tutorialSteps = [
-        {
-            icon: 'drag_pan',
-            title: 'Drag & Place',
-            desc: 'Drag pieces from the tray onto the board. Position them anywhere they fit.',
-        },
-        {
-            icon: 'align_horizontal_center',
-            title: 'Fill Lines',
-            desc: 'Complete a full row or column to clear it and score points.',
-        },
-        {
-            icon: 'trophy',
-            title: 'Keep Going',
-            desc: 'Clear lines to make room. The game ends when no pieces can be placed.',
-        },
-    ];
-
-    let tutorialStep = 0;
-    let tutorialEl = null;
-
     function showTutorial() {
-        tutorialStep = 0;
-        tutorialEl = document.createElement('div');
-        tutorialEl.className = 'tutorial-overlay';
-        tutorialEl.innerHTML = buildTutorialHTML(0);
-        document.body.appendChild(tutorialEl);
-
-        requestAnimationFrame(() => tutorialEl.classList.add('visible'));
-
-        tutorialEl.querySelector('.btn-tutorial').addEventListener('click', advanceTutorial);
-    }
-
-    function buildTutorialHTML(step) {
-        const s = tutorialSteps[step];
-        const isLast = step === tutorialSteps.length - 1;
-        const dots = tutorialSteps.map((_, i) =>
-            `<div class="tutorial-dot ${i === step ? 'active' : ''}"></div>`
-        ).join('');
-
-        return `
-            <div class="tutorial-card">
-                <span class="material-symbols-outlined tutorial-icon">${s.icon}</span>
-                <h3 class="tutorial-title">${s.title}</h3>
-                <p class="tutorial-desc">${s.desc}</p>
-                <div class="tutorial-dots">${dots}</div>
-                <button class="btn-tutorial">${isLast ? 'Got it!' : 'Next'}</button>
-            </div>
+        const el = document.createElement('div');
+        el.className = 'tutorial-overlay';
+        el.innerHTML = `
+            <div class="tutorial-hand"><svg viewBox="0 0 48 48" width="64" height="64" fill="none">
+                <defs>
+                    <linearGradient id="cursorGrad" x1="0" y1="0" x2="0.5" y2="1">
+                        <stop offset="0%" stop-color="#fb923c"/>
+                        <stop offset="100%" stop-color="#2dd4bf"/>
+                    </linearGradient>
+                    <filter id="cursorGlow">
+                        <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                <g filter="url(#cursorGlow)">
+                    <path d="M14 6l20 16-10 2 6 14-5 2-6-14-5 10z"
+                          fill="url(#cursorGrad)" stroke="white" stroke-width="1.5"
+                          stroke-linejoin="round"/>
+                </g>
+            </svg></div>
+            <div class="tutorial-hint">Drag pieces onto the board</div>
+            <div class="tutorial-tap-hint">Tap to skip</div>
         `;
-    }
+        document.body.appendChild(el);
 
-    function advanceTutorial() {
-        tutorialStep++;
-        if (tutorialStep >= tutorialSteps.length) {
+        requestAnimationFrame(() => el.classList.add('visible'));
+
+        function dismiss() {
             localStorage.setItem('blockRoyaleTutorialDone', 'true');
-            tutorialEl.classList.remove('visible');
-            setTimeout(() => tutorialEl.remove(), 300);
-            return;
+            el.classList.remove('visible');
+            setTimeout(() => el.remove(), 300);
         }
-        tutorialEl.innerHTML = buildTutorialHTML(tutorialStep);
-        tutorialEl.querySelector('.btn-tutorial').addEventListener('click', advanceTutorial);
+
+        el.addEventListener('click', dismiss);
+        // Auto-dismiss after 3 animation loops (2.4s each)
+        setTimeout(dismiss, 7200);
     }
 });

@@ -1,7 +1,6 @@
 /**
- * BLOCK BLAST - Game Engine
- * A puzzle game with drag-and-drop mechanics
- * Enhanced with: High Score, Sound Effects, Particle Explosions, Improved Touch
+ * BLOCK ROYALE — Game Engine
+ * A neon block puzzle game with drag-and-drop mechanics
  */
 
 class SoundManager {
@@ -9,6 +8,7 @@ class SoundManager {
         this.audioContext = null;
         this.enabled = true;
         this.initialized = false;
+        this.unlocked = false;
     }
 
     init() {
@@ -16,10 +16,35 @@ class SoundManager {
         try {
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.initialized = true;
+            // Immediately attempt resume — this must run inside a user gesture
+            // handler for iOS Safari to unlock the AudioContext.
+            this._unlock();
         } catch (e) {
             console.warn('Web Audio API not supported');
             this.enabled = false;
         }
+    }
+
+    /**
+     * Unlock iOS Safari audio by resuming the context and playing a silent
+     * buffer. iOS requires both resume() AND an audible buffer-source start
+     * within the same user gesture call stack to fully unlock audio.
+     */
+    _unlock() {
+        if (this.unlocked || !this.audioContext) return;
+        const ctx = this.audioContext;
+        // Resume returns a promise; we don't await it but it begins the unlock
+        const p = ctx.resume();
+        // Play a silent buffer to fully unlock on iOS Safari
+        const buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        source.onended = () => {
+            this.unlocked = true;
+        };
+        if (p) p.then(() => { this.unlocked = true; });
     }
 
     play(type) {
@@ -96,7 +121,7 @@ class SoundManager {
  */
 class LeaderboardManager {
     constructor() {
-        this.storageKey = 'blockBlastLeaderboard';
+        this.storageKey = 'blockRoyaleLeaderboard';
         this.maxEntries = 10;
     }
 
@@ -151,70 +176,7 @@ class LeaderboardManager {
     }
 }
 
-/**
- * Theme Manager - Light/Dark/System theme support
- */
-class ThemeManager {
-    constructor() {
-        this.storageKey = 'blockBlastTheme';
-        this.currentTheme = 'system';
-        this.init();
-    }
-
-    init() {
-        const saved = this.getSavedTheme();
-        this.setTheme(saved || 'system');
-
-        // Listen for system theme changes
-        window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-            if (this.currentTheme === 'system') {
-                this.applyTheme();
-            }
-        });
-    }
-
-    getSavedTheme() {
-        try {
-            return localStorage.getItem(this.storageKey);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    setTheme(theme) {
-        this.currentTheme = theme;
-        try {
-            localStorage.setItem(this.storageKey, theme);
-        } catch (e) {
-            console.warn('Could not save theme preference');
-        }
-        this.applyTheme();
-    }
-
-    applyTheme() {
-        let effectiveTheme = this.currentTheme;
-
-        if (effectiveTheme === 'system') {
-            effectiveTheme = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        }
-
-        document.documentElement.setAttribute('data-theme', effectiveTheme);
-    }
-
-    toggle() {
-        const themes = ['dark', 'light', 'system'];
-        const currentIndex = themes.indexOf(this.currentTheme);
-        const nextIndex = (currentIndex + 1) % themes.length;
-        this.setTheme(themes[nextIndex]);
-        return themes[nextIndex];
-    }
-
-    getThemeName() {
-        return this.currentTheme.charAt(0).toUpperCase() + this.currentTheme.slice(1);
-    }
-}
-
-class BlockBlast {
+class BlockRoyale {
     constructor() {
         // Game state
         this.board = [];
@@ -222,32 +184,40 @@ class BlockBlast {
         this.score = 0;
         this.highScore = 0;
         this.pieces = [null, null, null];
-        this.history = [];
         this.maxHistory = 1;
         this.isPaused = false;
         this.isGameOver = false;
 
-        // Drag state - improved for mobile
+        // Drag state
         this.draggingPiece = null;
         this.draggingPieceElement = null;
         this.draggingSlotIndex = null;
         this.isDragging = false;
         this.dragStartPos = { x: 0, y: 0 };
+        this.dragConfirmed = false;
         this.currentHighlight = [];
         this.lastValidPosition = null;
+        this.lastPointerPos = null;
+        this.lastDragTime = 0;
+        this.dragClone = null;
+        this.dragCache = null; // Cached layout values for drag session
+        this.lastSnapRow = -1;
+        this.lastSnapCol = -1;
 
-        // Touch offset - piece appears above finger on mobile
-        this.touchOffset = 120;
+        // Settings
+        this.hapticsEnabled = true;
+        this.pieceMode = 'tray';
 
         // Colors with hex values for particles
-        this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green'];
+        this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green', 'yellow'];
         this.colorHex = {
-            purple: '#A855F7',
-            cyan: '#22D3EE',
-            orange: '#FB923C',
-            blue: '#3B82F6',
-            red: '#F87171',
-            green: '#4ADE80'
+            purple: '#a855f7',
+            cyan: '#2dd4bf',
+            orange: '#fb923c',
+            blue: '#3b82f6',
+            red: '#f43f5e',
+            green: '#10b981',
+            yellow: '#facc15'
         };
 
         // Sound Manager
@@ -255,32 +225,6 @@ class BlockBlast {
 
         // Leaderboard Manager
         this.leaderboard = new LeaderboardManager();
-
-        // Theme Manager
-        this.theme = new ThemeManager();
-
-        // Piece shapes
-        this.shapes = [
-            { shape: [[1]], name: '1x1' },
-            { shape: [[1, 1]], name: '1x2' },
-            { shape: [[1], [1]], name: '2x1' },
-            { shape: [[1, 1, 1]], name: '1x3' },
-            { shape: [[1], [1], [1]], name: '3x1' },
-            { shape: [[1, 1, 1, 1]], name: '1x4' },
-            { shape: [[1], [1], [1], [1]], name: '4x1' },
-            { shape: [[1, 1], [1, 1]], name: '2x2' },
-            { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], name: '3x3' },
-            { shape: [[1, 0], [1, 0], [1, 1]], name: 'L1' },
-            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L2' },
-            { shape: [[1, 1], [0, 1], [0, 1]], name: 'L3' },
-            { shape: [[0, 0, 1], [1, 1, 1]], name: 'L4' },
-            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T1' },
-            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T2' },
-            { shape: [[0, 1, 0], [1, 1, 1]], name: 'T3' },
-            { shape: [[0, 1], [1, 1], [0, 1]], name: 'T4' },
-            { shape: [[1, 1, 0], [0, 1, 1]], name: 'Z1' },
-            { shape: [[0, 1, 1], [1, 1, 0]], name: 'Z2' },
-        ];
 
         // DOM elements
         this.boardElement = document.getElementById('gameBoard');
@@ -293,13 +237,13 @@ class BlockBlast {
         this.modalHighScoreElement = document.getElementById('modalHighScore');
         this.newHighScoreElement = document.getElementById('newHighScore');
         this.effectsContainer = document.getElementById('effectsContainer');
-        this.ghostPreview = document.getElementById('ghostPreview');
+        this.trayLabelElement = document.getElementById('trayLabel');
+        this.trayHelpElement = document.getElementById('trayHelp');
+        this.trayBadgeElement = document.getElementById('trayBadge');
 
         // Leaderboard elements
         this.leaderboardModal = document.getElementById('leaderboardModal');
         this.leaderboardList = document.getElementById('leaderboardList');
-        this.themeBtn = document.getElementById('themeBtn');
-        this.themeBtnLabel = document.getElementById('themeBtnLabel');
 
         this.init();
     }
@@ -311,11 +255,81 @@ class BlockBlast {
         this.bindEvents();
         this.generateNewPieces();
         this.updateScore();
+        this.prewarmAnimations();
+    }
+
+    /**
+     * Pre-warm CSS animations so iOS Safari compiles keyframes before first use.
+     * Without this, the first line clear stutters while the browser parses
+     * particle-explode, sparkle-fade, jelly-squish-pop for the first time.
+     */
+    prewarmAnimations() {
+        // Pre-create ALL effect elements so iOS Safari compiles CSS animations
+        // and allocates compositor layers BEFORE gameplay starts.
+        // Creating new animated DOM elements during gameplay causes a multi-second
+        // compositor stall on first use.
+        if (this._prewarmed) return; // idempotent — don't duplicate on newGame
+        this._prewarmed = true;
+        const container = this.effectsContainer;
+
+        // --- Score popup (reusable) ---
+        this._scorePopup = document.createElement('div');
+        container.appendChild(this._scorePopup);
+
+        // --- Combo/event text (reusable) ---
+        this._comboText = document.createElement('div');
+        container.appendChild(this._comboText);
+
+        // --- Flash overlay for big clears (reusable) ---
+        this._flashOverlay = document.createElement('div');
+        container.appendChild(this._flashOverlay);
+
+        // --- Particle pool (reusable, no DOM creation during gameplay) ---
+        this._particlePool = [];
+        const POOL_SIZE = 24;
+        for (let i = 0; i < POOL_SIZE; i++) {
+            const p = document.createElement('div');
+            p.style.cssText = 'visibility:hidden;';
+            container.appendChild(p);
+            this._particlePool.push(p);
+        }
+        this._particleIndex = 0;
+
+        // Force browser to compile all animation keyframes by briefly applying classes
+        this._scorePopup.className = 'score-popup';
+        this._scorePopup.textContent = '+0';
+        this._comboText.className = 'combo-text';
+        this._comboText.textContent = 'DOUBLE!';
+        this._flashOverlay.className = 'clear-flash-overlay';
+        this._particlePool.forEach(p => {
+            p.className = 'clear-particle';
+            p.style.cssText = 'left:-50px;top:-50px;--tx:10px;--ty:10px;background:red;';
+        });
+
+        // Read computed styles to force compilation
+        getComputedStyle(this._scorePopup).opacity;
+        getComputedStyle(this._comboText).opacity;
+        getComputedStyle(this._flashOverlay).opacity;
+        if (this._particlePool[0]) getComputedStyle(this._particlePool[0]).opacity;
+
+        // Hide everything after compilation
+        requestAnimationFrame(() => {
+            this._scorePopup.className = '';
+            this._scorePopup.style.cssText = 'visibility:hidden;';
+            this._comboText.className = '';
+            this._comboText.style.cssText = 'visibility:hidden;';
+            this._flashOverlay.className = '';
+            this._flashOverlay.style.cssText = 'visibility:hidden;';
+            this._particlePool.forEach(p => {
+                p.className = '';
+                p.style.cssText = 'visibility:hidden;';
+            });
+        });
     }
 
     loadHighScore() {
         try {
-            const saved = localStorage.getItem('blockBlastHighScore');
+            const saved = localStorage.getItem('blockRoyaleHighScore');
             this.highScore = saved ? parseInt(saved, 10) : 0;
         } catch (e) {
             this.highScore = 0;
@@ -325,7 +339,7 @@ class BlockBlast {
 
     saveHighScore() {
         try {
-            localStorage.setItem('blockBlastHighScore', this.highScore.toString());
+            localStorage.setItem('blockRoyaleHighScore', this.highScore.toString());
         } catch (e) {
             console.warn('Could not save high score');
         }
@@ -347,42 +361,80 @@ class BlockBlast {
         return false;
     }
 
+    setPieceMode(mode) {
+        this.pieceMode = mode === 'single' ? 'single' : 'tray';
+        this.fillPieceQueue();
+        this.updatePieceTrayUi();
+        this.renderPieces();
+        this.checkGameOver();
+    }
+
+    fillPieceQueue() {
+        const queue = this.pieces.filter(Boolean);
+        while (queue.length < 3) {
+            queue.push(this.getRandomPiece());
+        }
+        this.pieces = queue.slice(0, 3);
+    }
+
+    getVisiblePieces() {
+        if (this.pieceMode === 'single') {
+            return this.pieces[0] ? [this.pieces[0]] : [];
+        }
+        return this.pieces.filter(Boolean);
+    }
+
+    updatePieceTrayUi() {
+        const isSinglePieceMode = this.pieceMode === 'single';
+
+        this.pieceSlotsElement?.classList.toggle('single-piece-mode', isSinglePieceMode);
+
+        if (this.trayLabelElement) {
+            this.trayLabelElement.textContent = isSinglePieceMode ? 'Current Piece' : 'Next Pieces';
+        }
+
+        if (this.trayHelpElement) {
+            this.trayHelpElement.textContent = isSinglePieceMode
+                ? 'Place it to reveal the next shape.'
+                : 'Place all three to draw a fresh set.';
+        }
+
+        if (this.trayBadgeElement) {
+            this.trayBadgeElement.textContent = isSinglePieceMode ? '1 at a time' : '3 at a time';
+        }
+    }
+
     createBoard() {
-        this.board = [];
+        this.board = createEmptyBoard(this.boardSize);
         this.boardElement.innerHTML = '';
+        this.cellElements = []; // Cache cell DOM refs — avoids querySelector per access
 
         for (let row = 0; row < this.boardSize; row++) {
-            this.board[row] = [];
+            this.cellElements[row] = [];
             for (let col = 0; col < this.boardSize; col++) {
-                this.board[row][col] = null;
-
                 const cell = document.createElement('div');
                 cell.className = 'cell';
                 cell.dataset.row = row;
                 cell.dataset.col = col;
                 this.boardElement.appendChild(cell);
+                this.cellElements[row][col] = cell;
             }
         }
+
+        // Cache layout values for line clear particle positioning.
+        // This runs BEFORE any game DOM writes, so no layout flush penalty.
+        requestAnimationFrame(() => {
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const gap = parseFloat(getComputedStyle(this.boardElement).gap) || 6;
+            const cellSize = (boardRect.width - gap * (this.boardSize - 1)) / this.boardSize;
+            this._layoutCache = { boardRect, cellSize, stride: cellSize + gap };
+        });
     }
 
     createParticles() {
-        const container = document.getElementById('particles');
-        if (!container) return;
-
-        const particleCount = 15;
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.left = `${Math.random() * 100}%`;
-            particle.style.animationDelay = `${Math.random() * 10}s`;
-            particle.style.animationDuration = `${8 + Math.random() * 6}s`;
-
-            const colors = ['#22D3EE', '#A855F7', '#FB923C', '#3B82F6'];
-            particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-
-            container.appendChild(particle);
-        }
+        // Disabled — 15 continuously animated elements burn compositor resources
+        // on iOS Safari, contributing to first-interaction jank. Re-enable when
+        // performance budget allows.
     }
 
     bindEvents() {
@@ -403,8 +455,20 @@ class BlockBlast {
         document.addEventListener('touchmove', this.handleDragMove.bind(this), { passive: false });
 
         document.addEventListener('mouseup', this.handleDragEnd.bind(this));
-        document.addEventListener('touchend', this.handleDragEnd.bind(this));
-        document.addEventListener('touchcancel', this.handleDragEnd.bind(this));
+        document.addEventListener('touchend', this.handleDragEnd.bind(this), { passive: false });
+        document.addEventListener('touchcancel', this.handleDragEnd.bind(this), { passive: false });
+
+        // Reset drag state if user switches tabs or loses focus
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && this.isDragging) {
+                this.resetDragState();
+            }
+        });
+        window.addEventListener('blur', () => {
+            if (this.isDragging) {
+                this.resetDragState();
+            }
+        });
 
         // Prevent context menu on long press
         this.pieceSlotsElement.addEventListener('contextmenu', e => e.preventDefault());
@@ -414,10 +478,6 @@ class BlockBlast {
             this.sound.play('button');
             this.togglePause();
         });
-        document.getElementById('undoBtn').addEventListener('click', () => {
-            this.sound.play('button');
-            this.undo();
-        });
         document.getElementById('resumeBtn').addEventListener('click', () => {
             this.sound.play('button');
             this.togglePause();
@@ -426,10 +486,17 @@ class BlockBlast {
             this.sound.play('button');
             this.newGame();
         });
-        document.getElementById('restartBtn').addEventListener('click', () => {
-            this.sound.play('button');
-            this.newGame();
-        });
+
+        // Game Over Modal Buttons
+        const restartBtn = document.getElementById('restartBtn');
+        if (restartBtn) {
+            restartBtn.addEventListener('click', () => {
+                this.sound.play('button');
+                this.newGame();
+            });
+        }
+
+        // Home button is handled by the start screen controller in the DOMContentLoaded block
 
         // Leaderboard button
         const leaderboardBtn = document.getElementById('leaderboardBtn');
@@ -449,14 +516,6 @@ class BlockBlast {
             });
         }
 
-        // Theme toggle button
-        if (this.themeBtn) {
-            this.themeBtn.addEventListener('click', () => {
-                this.sound.play('button');
-                this.theme.toggle();
-                this.updateThemeButtonLabel();
-            });
-        }
     }
 
     getEventPosition(e) {
@@ -469,140 +528,267 @@ class BlockBlast {
         return { x: e.clientX, y: e.clientY };
     }
 
+    // =====================================================
+    // DRAG SYSTEM
+    // Floating clone follows finger at board cell size.
+    // Board cells show coloured preview at snap position.
+    // Y offset on mobile so thumb doesn't cover the piece.
+    // =====================================================
+
     handleDragStart(e) {
         if (this.isPaused || this.isGameOver) return;
 
-        const pos = this.getEventPosition(e);
-        const target = document.elementFromPoint(pos.x, pos.y);
-        const pieceElement = target?.closest('.piece');
+        if (this.isDragging) this.resetDragState();
 
-        if (!pieceElement) return;
+        try {
+            const pos = this.getEventPosition(e);
+            const target = document.elementFromPoint(pos.x, pos.y);
 
-        e.preventDefault();
+            // Try direct hit on piece first, then fall back to piece inside the slot
+            let pieceElement = target?.closest('.piece');
+            let slotElement;
 
-        const slotElement = pieceElement.closest('.piece-slot');
-        const slotIndex = parseInt(slotElement.dataset.slot);
+            if (pieceElement) {
+                slotElement = pieceElement.closest('.piece-slot');
+            } else {
+                // Touch landed on slot padding — grab the piece inside
+                slotElement = target?.closest('.piece-slot');
+                if (slotElement) {
+                    pieceElement = slotElement.querySelector('.piece');
+                }
+            }
 
-        if (!this.pieces[slotIndex]) return;
+            if (!pieceElement || !slotElement || !slotElement.dataset.slot) return;
 
-        this.isDragging = true;
-        this.draggingPiece = this.pieces[slotIndex];
-        this.draggingPieceElement = pieceElement;
-        this.draggingSlotIndex = slotIndex;
-        this.dragStartPos = pos;
+            e.preventDefault();
 
-        // Clone the piece for dragging
-        const clone = pieceElement.cloneNode(true);
-        clone.classList.add('dragging');
-        clone.id = 'dragging-piece';
+            const slotIndex = parseInt(slotElement.dataset.slot);
+            if (isNaN(slotIndex) || !this.pieces[slotIndex]) return;
+
+            this.isDragging = true;
+            this.dragConfirmed = false;
+            this.draggingPiece = this.pieces[slotIndex];
+            this.draggingPieceElement = pieceElement;
+            this.draggingSlotIndex = slotIndex;
+            this.dragStartPos = pos;
+            this.lastValidPosition = null;
+            this.lastSnapRow = -1;
+            this.lastSnapCol = -1;
+
+            // Cache layout values once — avoids getComputedStyle on every frame
+            const boardRect = this.boardElement.getBoundingClientRect();
+            const gap = parseFloat(getComputedStyle(this.boardElement).gap) || 6;
+            const cellSize = (boardRect.width - gap * (this.boardSize - 1)) / this.boardSize;
+            const stride = cellSize + gap;
+            const isMobile = window.matchMedia('(pointer: coarse)').matches;
+            this.dragCache = { boardRect, gap, cellSize, stride, isMobile };
+        } catch (error) {
+            console.warn('Drag start error:', error);
+            this.resetDragState();
+        }
+    }
+
+    /**
+     * Create a floating clone of the piece at board cell size.
+     * Called once when drag is confirmed (past dead zone).
+     */
+    createDragClone(piece) {
+        const clone = document.createElement('div');
+        clone.className = 'drag-clone';
+
+        const { cellSize, gap } = this.dragCache;
+        const cols = piece.shape[0].length;
+        const rows = piece.shape.length;
+
+        clone.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
+        clone.style.gridTemplateRows = `repeat(${rows}, ${cellSize}px)`;
+        clone.style.gap = `${gap}px`;
+
+        for (let r = 0; r < piece.shape.length; r++) {
+            for (let c = 0; c < piece.shape[r].length; c++) {
+                const cell = document.createElement('div');
+                if (piece.shape[r][c] === 1) {
+                    cell.className = `drag-cell color-${piece.color}`;
+                } else {
+                    cell.style.visibility = 'hidden';
+                }
+                clone.appendChild(cell);
+            }
+        }
+
         document.body.appendChild(clone);
-
-        // Fade original
-        pieceElement.classList.add('faded');
-
-        // Position the clone
-        this.updateDragPosition(pos.x, pos.y);
-
-        // Haptic feedback
-        if (navigator.vibrate) navigator.vibrate(15);
+        this.dragClone = clone;
     }
 
     handleDragMove(e) {
         if (!this.isDragging) return;
-
         e.preventDefault();
 
         const pos = this.getEventPosition(e);
-        this.updateDragPosition(pos.x, pos.y);
-        this.updateHighlight(pos.x, pos.y);
+
+        // Dead zone: require 8px movement before starting drag
+        if (!this.dragConfirmed) {
+            const dx = pos.x - this.dragStartPos.x;
+            const dy = pos.y - this.dragStartPos.y;
+            if (dx * dx + dy * dy < 64) return;
+
+            this.dragConfirmed = true;
+            // Hide tray piece, create floating clone
+            this.draggingPieceElement.classList.add('dragging-hidden');
+            this.createDragClone(this.draggingPiece);
+            if (this.hapticsEnabled && navigator.vibrate) navigator.vibrate(15);
+        }
+
+        // Throttle to ~60fps
+        const now = Date.now();
+        if (now - this.lastDragTime < 16) return;
+        this.lastDragTime = now;
+
+        // Move the floating clone to follow finger
+        this.updateClonePosition(pos.x, pos.y);
+
+        // Update board grid preview
+        this.updateGridSnap(pos.x, pos.y);
+    }
+
+    /**
+     * Position the drag clone centered on the finger with Y offset.
+     */
+    updateClonePosition(x, y) {
+        if (!this.dragClone || !this.draggingPiece || !this.dragCache) return;
+
+        const { cellSize, gap, stride, isMobile } = this.dragCache;
+        const piece = this.draggingPiece;
+        const cols = piece.shape[0].length;
+        const rows = piece.shape.length;
+
+        const cloneW = cols * cellSize + (cols - 1) * gap;
+        const cloneH = rows * cellSize + (rows - 1) * gap;
+        const offsetY = isMobile ? stride * 3 : 0;
+
+        this.dragClone.style.left = `${x - cloneW / 2}px`;
+        this.dragClone.style.top = `${y - offsetY - cloneH / 2}px`;
     }
 
     handleDragEnd(e) {
         if (!this.isDragging) return;
 
-        const pos = this.getEventPosition(e);
-
-        // Try to place the piece
-        if (this.lastValidPosition) {
-            const { row, col } = this.lastValidPosition;
-            if (this.canPlacePiece(this.draggingPiece, row, col)) {
-                this.placePiece(this.draggingPiece, row, col, this.draggingSlotIndex);
+        try {
+            if (!this.dragConfirmed) {
+                this.resetDragState();
+                return;
             }
+
+            // Clear preview highlights BEFORE placing so they don't strip the colour
+            this.clearHighlight();
+
+            // Place piece if we have a valid snap position
+            if (this.lastValidPosition && this.draggingPiece) {
+                const { row, col } = this.lastValidPosition;
+                if (this.canPlacePiece(this.draggingPiece, row, col)) {
+                    this.placePiece(this.draggingPiece, row, col, this.draggingSlotIndex);
+                }
+            }
+        } catch (error) {
+            console.warn('Drag end error:', error);
         }
 
-        // Cleanup
-        const clone = document.getElementById('dragging-piece');
-        if (clone) clone.remove();
+        this.resetDragState();
+    }
 
-        if (this.draggingPieceElement) {
-            this.draggingPieceElement.classList.remove('faded');
+    resetDragState() {
+        // Remove drag clone
+        if (this.dragClone) {
+            this.dragClone.remove();
+            this.dragClone = null;
         }
 
+        // Restore tray piece visibility
+        document.querySelectorAll('.piece.dragging-hidden').forEach(el => {
+            el.classList.remove('dragging-hidden');
+        });
+
+        // Clear board preview
         this.clearHighlight();
-        this.hideGhostPreview();
 
+        // Reset state
         this.isDragging = false;
+        this.dragConfirmed = false;
         this.draggingPiece = null;
         this.draggingPieceElement = null;
         this.draggingSlotIndex = null;
         this.lastValidPosition = null;
+        this.dragCache = null;
+        this.lastSnapRow = -1;
+        this.lastSnapCol = -1;
     }
 
-    updateDragPosition(x, y) {
-        const clone = document.getElementById('dragging-piece');
-        if (!clone) return;
+    /**
+     * Core drag system.
+     * Maps finger position to board grid with a small Y offset so the
+     * player can see the piece above their thumb.
+     * Clamps to board edges when finger is near/off the board.
+     */
+    updateGridSnap(x, y) {
+        if (!this.draggingPiece || !this.dragCache) return;
 
-        const rect = clone.getBoundingClientRect();
-        // Center the piece on the cursor/finger, offset up for touch
-        const offsetY = window.matchMedia('(pointer: coarse)').matches ? this.touchOffset : 30;
+        const { boardRect, stride, isMobile } = this.dragCache;
+        const offsetY = isMobile ? stride * 3 : 0;
 
-        clone.style.left = `${x}px`;
-        clone.style.top = `${y - offsetY}px`;
-        clone.style.transform = 'translate(-50%, -50%) scale(1.15)';
-    }
+        const shape = this.draggingPiece.shape;
+        const pieceW = shape[0].length;
+        const pieceH = shape.length;
 
-    updateHighlight(x, y) {
-        this.clearHighlight();
+        // Map finger position (with offset) to grid
+        const centerCol = (x - boardRect.left) / stride;
+        const centerRow = (y - offsetY - boardRect.top) / stride;
 
-        if (!this.draggingPiece) return;
-
-        const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-
-        // Account for touch offset
-        const offsetY = window.matchMedia('(pointer: coarse)').matches ? this.touchOffset : 30;
-        const targetY = y - offsetY;
-
-        const col = Math.floor((x - boardRect.left) / cellSize);
-        const row = Math.floor((targetY - boardRect.top) / cellSize);
-
-        if (row < 0 || col < 0 || row >= this.boardSize || col >= this.boardSize) {
-            this.hideGhostPreview();
+        // If finger is well below the board (back near the tray), cancel placement.
+        // Must account for the mobile Y offset (stride * 3) — targeting the bottom
+        // row puts the finger well below the board edge.
+        const boardBottom = boardRect.top + boardRect.height;
+        if (y > boardBottom + stride * 3) {
+            this.clearHighlight();
             this.lastValidPosition = null;
+            this.lastSnapRow = -1;
+            this.lastSnapCol = -1;
             return;
         }
+
+        // Convert to top-left cell of piece
+        let col = Math.floor(centerCol - pieceW / 2 + 0.5);
+        let row = Math.floor(centerRow - pieceH / 2 + 0.5);
+
+        // Clamp to board edges — keeps preview visible when finger drifts off
+        col = Math.max(0, Math.min(col, this.boardSize - pieceW));
+        row = Math.max(0, Math.min(row, this.boardSize - pieceH));
+
+        // Skip DOM work if snap position hasn't changed
+        if (row === this.lastSnapRow && col === this.lastSnapCol) return;
+        this.lastSnapRow = row;
+        this.lastSnapCol = col;
+
+        // Now clear previous highlight and rebuild
+        this.clearHighlight();
 
         const canPlace = this.canPlacePiece(this.draggingPiece, row, col);
 
         if (canPlace) {
-            // Haptic feedback when snapping to a new valid position
             const isNewPos = !this.lastValidPosition ||
                 this.lastValidPosition.row !== row ||
                 this.lastValidPosition.col !== col;
 
-            if (isNewPos && navigator.vibrate) {
+            if (isNewPos && this.hapticsEnabled && navigator.vibrate) {
                 navigator.vibrate(10);
             }
 
             this.lastValidPosition = { row, col };
-            this.showGhostPreview(row, col);
         } else {
             this.lastValidPosition = null;
-            this.hideGhostPreview();
         }
 
-        // Highlight cells on the board
-        const shape = this.draggingPiece.shape;
+        // Show coloured preview on the board cells
+        const color = this.draggingPiece.color;
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] === 1) {
@@ -612,147 +798,107 @@ class BlockBlast {
                     if (cellRow >= 0 && cellRow < this.boardSize &&
                         cellCol >= 0 && cellCol < this.boardSize) {
                         const cell = this.getCellElement(cellRow, cellCol);
-                        cell.classList.add(canPlace ? 'highlight' : 'invalid');
-                        this.currentHighlight.push(cell);
+                        if (cell) {
+                            const colorClass = `color-${color}`;
+                            if (canPlace) {
+                                cell.classList.add('preview-piece', colorClass);
+                                this.currentHighlight.push({ cell, addedClass: colorClass });
+                            } else {
+                                cell.classList.add('invalid');
+                                this.currentHighlight.push({ cell, addedClass: null });
+                            }
+                        }
                     }
                 }
             }
         }
-    }
 
-    showGhostPreview(row, col) {
-        if (!this.ghostPreview || !this.draggingPiece) return;
+        // Line-clear preview: highlight rows/cols that would complete
+        if (canPlace) {
+            const { rows: clearRows, cols: clearCols } = previewLinesToClear(
+                this.board, this.draggingPiece, row, col
+            );
 
-        const boardRect = this.boardElement.getBoundingClientRect();
-        const cellSize = boardRect.width / this.boardSize;
-        const shape = this.draggingPiece.shape;
-
-        this.ghostPreview.innerHTML = '';
-        this.ghostPreview.style.display = 'grid';
-        this.ghostPreview.style.gridTemplateColumns = `repeat(${shape[0].length}, ${cellSize - 3}px)`;
-        this.ghostPreview.style.gap = '3px';
-        this.ghostPreview.style.left = `${boardRect.left + col * cellSize + 12}px`;
-        this.ghostPreview.style.top = `${boardRect.top + row * cellSize + 12}px`;
-        this.ghostPreview.classList.add('visible');
-
-        for (let r = 0; r < shape.length; r++) {
-            for (let c = 0; c < shape[r].length; c++) {
-                const cell = document.createElement('div');
-                if (shape[r][c] === 1) {
-                    cell.className = 'ghost-cell';
-                    cell.style.width = `${cellSize - 3}px`;
-                    cell.style.height = `${cellSize - 3}px`;
-                } else {
-                    cell.style.visibility = 'hidden';
-                    cell.style.width = `${cellSize - 3}px`;
-                    cell.style.height = `${cellSize - 3}px`;
+            for (const clearRow of clearRows) {
+                for (let c = 0; c < this.boardSize; c++) {
+                    const cell = this.getCellElement(clearRow, c);
+                    if (cell && !cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                        this.currentHighlight.push({ cell, addedClass: 'line-clear-preview' });
+                    } else if (cell && cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                    }
                 }
-                this.ghostPreview.appendChild(cell);
             }
-        }
-    }
 
-    hideGhostPreview() {
-        if (this.ghostPreview) {
-            this.ghostPreview.classList.remove('visible');
+            for (const clearCol of clearCols) {
+                for (let r = 0; r < this.boardSize; r++) {
+                    const cell = this.getCellElement(r, clearCol);
+                    if (cell && !cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                        this.currentHighlight.push({ cell, addedClass: 'line-clear-preview' });
+                    } else if (cell && cell.classList.contains('preview-piece')) {
+                        cell.classList.add('line-clear-preview');
+                    }
+                }
+            }
         }
     }
 
     clearHighlight() {
-        this.currentHighlight.forEach(cell => {
-            cell.classList.remove('highlight', 'invalid');
-        });
+        for (let i = 0; i < this.currentHighlight.length; i++) {
+            const { cell, addedClass } = this.currentHighlight[i];
+            cell.classList.remove('highlight', 'invalid', 'preview-piece', 'line-clear-preview');
+            // Only remove color from non-placed cells — placed blocks keep their color
+            if (addedClass && addedClass !== 'line-clear-preview' && !cell.classList.contains('filled')) {
+                cell.classList.remove(addedClass);
+            }
+        }
         this.currentHighlight = [];
     }
 
     getCellElement(row, col) {
-        return this.boardElement.querySelector(`[data-row="${row}"][data-col="${col}"]`);
+        return this.cellElements[row]?.[col];
     }
 
     canPlacePiece(piece, startRow, startCol) {
-        const shape = piece.shape;
-
-        for (let r = 0; r < shape.length; r++) {
-            for (let c = 0; c < shape[r].length; c++) {
-                if (shape[r][c] === 1) {
-                    const row = startRow + r;
-                    const col = startCol + c;
-
-                    if (row < 0 || row >= this.boardSize ||
-                        col < 0 || col >= this.boardSize) {
-                        return false;
-                    }
-
-                    if (this.board[row][col] !== null) {
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
+        return canPlacePiece(this.board, piece, startRow, startCol);
     }
 
     placePiece(piece, startRow, startCol, pieceIndex) {
-        this.saveState();
         this.sound.play('place');
 
-        const shape = piece.shape;
-        const color = piece.color;
-        let blockCount = 0;
+        const blockCount = placePieceOnBoard(this.board, piece, startRow, startCol);
 
+        // Update DOM to reflect board state
+        const shape = piece.shape;
         for (let r = 0; r < shape.length; r++) {
             for (let c = 0; c < shape[r].length; c++) {
                 if (shape[r][c] === 1) {
-                    const row = startRow + r;
-                    const col = startCol + c;
-
-                    this.board[row][col] = color;
-                    const cell = this.getCellElement(row, col);
-                    cell.classList.add('filled', `color-${color}`);
-                    blockCount++;
+                    const cell = this.getCellElement(startRow + r, startCol + c);
+                    cell.classList.add('filled', `color-${piece.color}`);
                 }
             }
         }
 
         this.addScore(blockCount);
         this.pieces[pieceIndex] = null;
-        this.renderPieces();
+        if (this.pieceMode === 'single') {
+            this.fillPieceQueue();
+            this.renderPieces();
+        } else if (this.pieces.every(p => p === null)) {
+            this.generateNewPieces();
+        } else {
+            this.renderPieces();
+        }
 
-        setTimeout(() => {
-            this.checkAndClearLines();
-
-            if (this.pieces.every(p => p === null)) {
-                this.generateNewPieces();
-            }
-
-            this.checkGameOver();
-        }, 50);
+        this.checkAndClearLines();
+        this.checkGameOver();
     }
 
     checkAndClearLines() {
-        const rowsToClear = [];
-        const colsToClear = [];
-
-        for (let row = 0; row < this.boardSize; row++) {
-            if (this.board[row].every(cell => cell !== null)) {
-                rowsToClear.push(row);
-            }
-        }
-
-        for (let col = 0; col < this.boardSize; col++) {
-            let fullColumn = true;
-            for (let row = 0; row < this.boardSize; row++) {
-                if (this.board[row][col] === null) {
-                    fullColumn = false;
-                    break;
-                }
-            }
-            if (fullColumn) {
-                colsToClear.push(col);
-            }
-        }
-
-        const totalLines = rowsToClear.length + colsToClear.length;
+        const { rows, cols, cellsToClear } = findLinesToClear(this.board);
+        const totalLines = rows.length + cols.length;
 
         if (totalLines > 0) {
             if (totalLines > 1) {
@@ -761,130 +907,171 @@ class BlockBlast {
                 this.sound.play('clear');
             }
 
-            const cellsToClear = new Set();
-            const cellColors = new Map();
+            // Use cached layout values — NO DOM reads allowed here.
+            // Any getBoundingClientRect/getComputedStyle after placePiece's DOM writes
+            // forces iOS Safari to flush a synchronous paint, showing the complete row
+            // before the clearing animation starts (multi-second stall on first clear).
+            const cache = this.dragCache || this._layoutCache;
+            const boardRect = cache.boardRect;
+            const cellSize = cache.cellSize;
+            const stride = cache.stride;
 
-            rowsToClear.forEach(row => {
-                for (let col = 0; col < this.boardSize; col++) {
-                    const key = `${row}-${col}`;
-                    cellsToClear.add(key);
-                    cellColors.set(key, this.board[row][col]);
-                }
-            });
-
-            colsToClear.forEach(col => {
-                for (let row = 0; row < this.boardSize; row++) {
-                    const key = `${row}-${col}`;
-                    cellsToClear.add(key);
-                    cellColors.set(key, this.board[row][col]);
-                }
-            });
-
+            const clearData = [];
             cellsToClear.forEach(key => {
                 const [row, col] = key.split('-').map(Number);
                 const cell = this.getCellElement(row, col);
-                const color = cellColors.get(key);
-
-                cell.classList.add('clearing');
-                this.spawnParticleExplosion(cell, color);
+                const color = this.board[row][col];
+                const centerX = boardRect.left + col * stride + cellSize / 2;
+                const centerY = boardRect.top + row * stride + cellSize / 2;
+                clearData.push({ cell, color, centerX, centerY });
             });
 
-            const baseScore = cellsToClear.size * 10;
-            const comboBonus = totalLines > 1 ? totalLines * 50 : 0;
-            const totalScore = baseScore + comboBonus;
+            // Update board data
+            clearCells(this.board, cellsToClear);
 
-            this.addScore(totalScore);
-
-            if (totalLines > 1) {
-                this.showComboText(totalLines);
+            // Cell clearing animation
+            for (const { cell } of clearData) {
+                cell.classList.add('clearing');
             }
 
+            // Emit particles from pool (no DOM creation)
+            for (const { centerX, centerY, color } of clearData) {
+                const hex = this.colorHex[color] || '#FFFFFF';
+                this.emitParticles(centerX, centerY, hex, 2);
+            }
+
+            // Score
+            const totalScore = calculateClearScore(cellsToClear.size, totalLines);
+            this.addScore(totalScore);
             this.showScorePopup(totalScore);
 
+            // Tiered effects based on clear size
+            const isCross = rows.length > 0 && cols.length > 0;
+
+            if (isCross) {
+                // Row + column cleared in same move
+                this.showComboText('CROSS!');
+                this.shakeBoard(5, 250);
+                this.showFlashOverlay('var(--accent-teal)', 250);
+            } else if (totalLines >= 4) {
+                this.showComboText('MEGA!');
+                this.shakeBoard(8, 350);
+                this.showFlashOverlay('var(--accent-orange)', 350);
+            } else if (totalLines === 3) {
+                this.showComboText('TRIPLE!');
+                this.shakeBoard(5, 250);
+            } else if (totalLines === 2) {
+                this.showComboText('DOUBLE!');
+                this.shakeBoard(3, 150);
+            }
+            // Single line: just the cell flash + particles, no combo text
+
+            // Check for board clear (all cells empty after this clear)
+            const boardEmpty = this.board.every(row => row.every(cell => !cell));
+            if (boardEmpty) {
+                this.showComboText('PERFECT!');
+                this.shakeBoard(10, 500);
+                this.showFlashOverlay('white', 400);
+            }
+
+            // Visual cleanup after animation
             setTimeout(() => {
-                cellsToClear.forEach(key => {
-                    const [row, col] = key.split('-').map(Number);
-                    this.board[row][col] = null;
-                    const cell = this.getCellElement(row, col);
-                    cell.className = 'cell flash';
-
-                    setTimeout(() => cell.classList.remove('flash'), 250);
-                });
-            }, 400);
-        }
-    }
-
-    spawnParticleExplosion(cell, colorName) {
-        const rect = cell.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        const color = this.colorHex[colorName] || '#FFFFFF';
-
-        const particleCount = 6;
-
-        for (let i = 0; i < particleCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'clear-particle';
-
-            const angle = (Math.PI * 2 / particleCount) * i + (Math.random() - 0.5) * 0.5;
-            const distance = 35 + Math.random() * 50;
-            const tx = Math.cos(angle) * distance;
-            const ty = Math.sin(angle) * distance;
-
-            particle.style.left = `${centerX}px`;
-            particle.style.top = `${centerY}px`;
-            particle.style.background = color;
-            particle.style.boxShadow = `0 0 8px ${color}`;
-            particle.style.setProperty('--tx', `${tx}px`);
-            particle.style.setProperty('--ty', `${ty}px`);
-
-            this.effectsContainer.appendChild(particle);
-
-            setTimeout(() => particle.remove(), 700);
-        }
-
-        for (let i = 0; i < 3; i++) {
-            const sparkle = document.createElement('div');
-            sparkle.className = 'sparkle';
-            sparkle.style.left = `${centerX + (Math.random() - 0.5) * 25}px`;
-            sparkle.style.top = `${centerY + (Math.random() - 0.5) * 25}px`;
-            sparkle.style.color = color;
-            sparkle.style.animationDelay = `${Math.random() * 0.15}s`;
-
-            this.effectsContainer.appendChild(sparkle);
-
-            setTimeout(() => sparkle.remove(), 500);
+                for (const { cell } of clearData) {
+                    cell.className = 'cell';
+                }
+            }, 200);
         }
     }
 
     generateNewPieces() {
-        for (let i = 0; i < 3; i++) {
-            const shapeData = this.shapes[Math.floor(Math.random() * this.shapes.length)];
-            const color = this.colors[Math.floor(Math.random() * this.colors.length)];
-
-            this.pieces[i] = {
-                shape: shapeData.shape,
-                name: shapeData.name,
-                color: color
-            };
-        }
-
+        this.pieces = [this.getRandomPiece(), this.getRandomPiece(), this.getRandomPiece()];
         this.renderPieces();
+    }
+
+    getRandomPiece() {
+        const shapes = this.getShapes();
+        const shapeData = shapes[Math.floor(Math.random() * shapes.length)];
+        const colors = this.colors;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+
+        return {
+            shape: shapeData.shape,
+            name: 'piece',
+            color: color
+        };
+    }
+
+    getShapes() {
+        return [
+            // Singles & lines
+            { shape: [[1]], name: '1x1' },
+            { shape: [[1, 1]], name: '1x2_h' },
+            { shape: [[1], [1]], name: '1x2_v' },
+            { shape: [[1, 1, 1]], name: '1x3_h' },
+            { shape: [[1], [1], [1]], name: '1x3_v' },
+            { shape: [[1, 1, 1, 1]], name: '1x4_h' },
+            { shape: [[1], [1], [1], [1]], name: '1x4_v' },
+            { shape: [[1, 1, 1, 1, 1]], name: '1x5_h' },
+            { shape: [[1], [1], [1], [1], [1]], name: '1x5_v' },
+
+            // Squares
+            { shape: [[1, 1], [1, 1]], name: '2x2' },
+            { shape: [[1, 1, 1], [1, 1, 1], [1, 1, 1]], name: '3x3' },
+
+            // Rectangles
+            { shape: [[1, 1, 1], [1, 1, 1]], name: '2x3_h' },
+            { shape: [[1, 1], [1, 1], [1, 1]], name: '2x3_v' },
+
+            // L-shapes (small — 2x2, all 4 orientations)
+            { shape: [[1, 1], [1, 0]], name: 'L2_a' },
+            { shape: [[1, 0], [1, 1]], name: 'L2_b' },
+            { shape: [[0, 1], [1, 1]], name: 'L2_c' },
+            { shape: [[1, 1], [0, 1]], name: 'L2_d' },
+
+            // L-shapes (large — 3 cells long, all 4 orientations)
+            { shape: [[1, 1, 1], [1, 0, 0]], name: 'L3_a' },
+            { shape: [[1, 1, 1], [0, 0, 1]], name: 'L3_b' },
+            { shape: [[1, 0], [1, 0], [1, 1]], name: 'L3_c' },
+            { shape: [[0, 1], [0, 1], [1, 1]], name: 'L3_d' },
+            { shape: [[1, 0, 0], [1, 1, 1]], name: 'L3_e' },
+            { shape: [[0, 0, 1], [1, 1, 1]], name: 'L3_f' },
+            { shape: [[1, 1], [0, 1], [0, 1]], name: 'L3_g' },
+            { shape: [[1, 1], [1, 0], [1, 0]], name: 'L3_h' },
+
+            // T-shapes (all 4 orientations)
+            { shape: [[1, 1, 1], [0, 1, 0]], name: 'T_up' },
+            { shape: [[0, 1, 0], [1, 1, 1]], name: 'T_down' },
+            { shape: [[1, 0], [1, 1], [1, 0]], name: 'T_right' },
+            { shape: [[0, 1], [1, 1], [0, 1]], name: 'T_left' },
+
+            // S/Z shapes (both orientations)
+            { shape: [[1, 1, 0], [0, 1, 1]], name: 'S_h' },
+            { shape: [[0, 1, 1], [1, 1, 0]], name: 'Z_h' },
+            { shape: [[0, 1], [1, 1], [1, 0]], name: 'S_v' },
+            { shape: [[1, 0], [1, 1], [0, 1]], name: 'Z_v' },
+        ];
     }
 
     renderPieces() {
         const slots = this.pieceSlotsElement.querySelectorAll('.piece-slot');
+        const isSinglePieceMode = this.pieceMode === 'single';
 
         slots.forEach((slot, index) => {
+            const hideSlot = isSinglePieceMode && index > 0;
+            slot.classList.toggle('is-hidden-slot', hideSlot);
+            slot.classList.toggle('is-primary-slot', isSinglePieceMode && index === 0);
+            slot.setAttribute('aria-hidden', hideSlot ? 'true' : 'false');
             slot.innerHTML = '';
+
+            if (hideSlot) return;
 
             const piece = this.pieces[index];
             if (!piece) return;
 
             const pieceElement = document.createElement('div');
             pieceElement.className = 'piece';
-            pieceElement.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 30px)`;
-            pieceElement.style.gridTemplateRows = `repeat(${piece.shape.length}, 30px)`;
+            pieceElement.style.gridTemplateColumns = `repeat(${piece.shape[0].length}, 1fr)`;
+            pieceElement.style.gridTemplateRows = `repeat(${piece.shape.length}, 1fr)`;
 
             for (let r = 0; r < piece.shape.length; r++) {
                 for (let c = 0; c < piece.shape[r].length; c++) {
@@ -916,51 +1103,104 @@ class BlockBlast {
         }
     }
 
-    showScorePopup(score) {
-        const popup = document.createElement('div');
-        popup.className = 'score-popup';
-        popup.textContent = `+${score}`;
-
-        const boardRect = this.boardElement.getBoundingClientRect();
-        popup.style.left = `${boardRect.left + boardRect.width / 2}px`;
-        popup.style.top = `${boardRect.top + boardRect.height / 2}px`;
-
-        this.effectsContainer.appendChild(popup);
-
-        setTimeout(() => popup.remove(), 800);
+    // Get a particle from the pool (cycles through, reusing oldest)
+    _getParticle() {
+        const p = this._particlePool[this._particleIndex];
+        this._particleIndex = (this._particleIndex + 1) % this._particlePool.length;
+        return p;
     }
 
-    showComboText(lines) {
-        const comboText = document.createElement('div');
-        comboText.className = 'combo-text';
-
-        if (lines === 2) {
-            comboText.textContent = 'DOUBLE!';
-        } else if (lines === 3) {
-            comboText.textContent = 'TRIPLE!';
-        } else {
-            comboText.textContent = `${lines}x COMBO!`;
+    // Emit particles at a position using the pre-created pool
+    emitParticles(centerX, centerY, hex, count = 2) {
+        for (let i = 0; i < count; i++) {
+            const p = this._getParticle();
+            if (!p) continue;
+            const angle = (Math.PI * 2 * i / count) + (Math.random() - 0.5);
+            const dist = 25 + Math.random() * 35;
+            p.className = '';
+            p.offsetWidth; // force reflow to restart animation
+            p.style.cssText = `left:${centerX}px;top:${centerY}px;background:${hex};--tx:${Math.cos(angle) * dist}px;--ty:${Math.sin(angle) * dist}px;`;
+            p.className = 'clear-particle';
+            setTimeout(() => {
+                p.style.cssText = 'visibility:hidden;';
+                p.className = '';
+            }, 700);
         }
+    }
 
-        this.effectsContainer.appendChild(comboText);
+    // Screen shake effect
+    shakeBoard(intensity = 4, duration = 200) {
+        const board = this.boardElement.parentElement; // board-frame
+        const start = performance.now();
+        const shake = () => {
+            const elapsed = performance.now() - start;
+            if (elapsed > duration) {
+                board.style.transform = '';
+                return;
+            }
+            const decay = 1 - elapsed / duration;
+            const x = (Math.random() - 0.5) * intensity * decay;
+            const y = (Math.random() - 0.5) * intensity * decay;
+            board.style.transform = `translate(${x}px, ${y}px)`;
+            requestAnimationFrame(shake);
+        };
+        requestAnimationFrame(shake);
+    }
 
-        setTimeout(() => comboText.remove(), 700);
+    // Flash overlay for big clears
+    showFlashOverlay(color = 'white', duration = 300) {
+        const el = this._flashOverlay;
+        if (!el) return;
+        el.className = '';
+        el.offsetWidth;
+        el.style.cssText = `--flash-color:${color};--flash-duration:${duration}ms;`;
+        el.className = 'clear-flash-overlay';
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, duration);
+    }
+
+    showScorePopup(score) {
+        const el = this._scorePopup;
+        if (!el) return;
+        const cache = this.dragCache || this._layoutCache;
+        if (!cache) return;
+
+        // Reset animation by removing class, forcing reflow, re-adding
+        el.className = '';
+        el.offsetWidth; // force reflow to restart animation
+        el.textContent = `+${score}`;
+        el.style.cssText = `left:${cache.boardRect.left + cache.boardRect.width / 2}px;top:${cache.boardRect.top + cache.boardRect.height / 2}px;`;
+        el.className = 'score-popup';
+
+        // Hide after animation completes
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, 800);
+    }
+
+    showComboText(text) {
+        const el = this._comboText;
+        if (!el) return;
+
+        el.className = '';
+        el.offsetWidth; // force reflow to restart animation
+        el.textContent = String(text);
+        el.style.cssText = '';
+        el.className = 'combo-text';
+
+        setTimeout(() => {
+            el.style.cssText = 'visibility:hidden;';
+            el.className = '';
+        }, 700);
     }
 
     checkGameOver() {
-        const availablePieces = this.pieces.filter(p => p !== null);
+        const availablePieces = this.getVisiblePieces();
 
-        for (const piece of availablePieces) {
-            for (let row = 0; row < this.boardSize; row++) {
-                for (let col = 0; col < this.boardSize; col++) {
-                    if (this.canPlacePiece(piece, row, col)) {
-                        return;
-                    }
-                }
-            }
-        }
-
-        if (availablePieces.length > 0) {
+        if (availablePieces.length > 0 && !hasValidMove(this.board, availablePieces)) {
             this.gameOver();
         }
     }
@@ -985,6 +1225,17 @@ class BlockBlast {
         }
 
         this.gameOverModal.classList.add('active');
+
+        // Switch to game over screen colours
+        document.documentElement.classList.remove('screen-game');
+        document.documentElement.classList.add('screen-gameover');
+        const cBg = document.querySelector('.cosmic-bg');
+        if (cBg) { cBg.classList.remove('bg-game'); cBg.classList.add('bg-gameover'); }
+        const m1 = document.querySelector('meta[name="theme-color"]');
+        if (m1) m1.remove();
+        const m1n = document.createElement('meta');
+        m1n.name = 'theme-color'; m1n.content = '#E8765A';
+        document.head.appendChild(m1n);
     }
 
     showLeaderboard() {
@@ -1006,7 +1257,11 @@ class BlockBlast {
 
                 const rankEl = document.createElement('span');
                 rankEl.className = 'leaderboard-rank';
-                rankEl.textContent = index === 0 ? '🏆' : `#${index + 1}`;
+                if (index === 0) {
+                    rankEl.innerHTML = '<span class="icon" style="color: #facc15;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9A6 6 0 0018 9V4H6V9z"/><path d="M6 5H4a1 1 0 00-1 1v1.5A3.5 3.5 0 006.5 11H7"/><path d="M18 5h2a1 1 0 011 1v1.5A3.5 3.5 0 0117.5 11H17"/><line x1="12" y1="15" x2="12" y2="18"/><path d="M8 21h8"/><path d="M8 21l1-3h6l1 3"/></svg></span>';
+                } else {
+                    rankEl.textContent = `#${index + 1}`;
+                }
 
                 const scoreEl = document.createElement('span');
                 scoreEl.className = 'leaderboard-score';
@@ -1032,61 +1287,32 @@ class BlockBlast {
         }
     }
 
-    updateThemeButtonLabel() {
-        if (this.themeBtnLabel) {
-            this.themeBtnLabel.textContent = this.theme.getThemeName();
-        }
-    }
-
     togglePause() {
         this.isPaused = !this.isPaused;
         this.pauseModal.classList.toggle('active', this.isPaused);
     }
 
-    saveState() {
-        const state = {
-            board: this.board.map(row => [...row]),
-            score: this.score,
-            pieces: this.pieces.map(p => p ? { ...p, shape: p.shape.map(r => [...r]) } : null)
-        };
-
-        this.history = [state];
-    }
-
-    undo() {
-        if (this.history.length === 0) return;
-
-        const state = this.history.pop();
-        this.board = state.board;
-        this.score = state.score;
-        this.pieces = state.pieces;
-
-        for (let row = 0; row < this.boardSize; row++) {
-            for (let col = 0; col < this.boardSize; col++) {
-                const cell = this.getCellElement(row, col);
-                cell.className = 'cell';
-
-                if (this.board[row][col]) {
-                    cell.classList.add('filled', `color-${this.board[row][col]}`);
-                }
-            }
-        }
-
-        this.updateScore();
-        this.renderPieces();
-    }
-
-    newGame() {
+    newGame(keepScore = false) {
         this.board = [];
-        this.score = 0;
+        if (!keepScore) this.score = 0;
         this.pieces = [null, null, null];
-        this.history = [];
         this.isGameOver = false;
         this.isPaused = false;
 
         this.gameOverModal.classList.remove('active');
         this.pauseModal.classList.remove('active');
         this.newHighScoreElement.classList.remove('show');
+
+        // Restore game screen colours
+        document.documentElement.classList.remove('screen-gameover');
+        document.documentElement.classList.add('screen-game');
+        const cBg2 = document.querySelector('.cosmic-bg');
+        if (cBg2) { cBg2.classList.remove('bg-gameover'); cBg2.classList.add('bg-game'); }
+        const m2 = document.querySelector('meta[name="theme-color"]');
+        if (m2) m2.remove();
+        const m2n = document.createElement('meta');
+        m2n.name = 'theme-color'; m2n.content = '#F5F3F0';
+        document.head.appendChild(m2n);
 
         this.createBoard();
         this.generateNewPieces();
@@ -1096,32 +1322,305 @@ class BlockBlast {
 
 // Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    window.game = new BlockBlast();
-
-    const splashScreen = document.getElementById('splashScreen');
+    const startScreen = document.getElementById('startScreen');
     const gameContainer = document.getElementById('gameContainer');
-    const tapToStart = document.querySelector('.tap-to-start');
+    const startHighScore = document.getElementById('startHighScore');
+    const privacyModal = document.getElementById('privacyModal');
 
-    // Resume audio context on splash click (important for mobile)
-    const startApp = () => {
-        if (window.game && window.game.sound && window.game.sound.context) {
-            window.game.sound.context.resume().catch(e => console.log('Audio resume failed', e));
-        }
+    // Load high score for start screen display
+    try {
+        const saved = localStorage.getItem('blockRoyaleHighScore');
+        if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
+    } catch (e) {}
 
-        splashScreen.classList.add('hidden');
-        gameContainer.style.opacity = '1';
-
-        // Remove splash after transition
-        setTimeout(() => {
-            splashScreen.style.display = 'none';
-        }, 500);
+    // Settings state
+    const settings = {
+        sound: localStorage.getItem('blockRoyaleSound') !== 'false',
+        haptics: localStorage.getItem('blockRoyaleHaptics') !== 'false',
+        pieceMode: localStorage.getItem('blockRoyalePieceMode') === 'single' ? 'single' : 'tray',
     };
 
-    if (tapToStart) {
-        tapToStart.addEventListener('click', startApp);
-        tapToStart.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Prevent double firing
-            startApp();
-        }, { passive: false });
+    const cosmicBg = document.querySelector('.cosmic-bg');
+    const themeMetaTag = document.querySelector('meta[name="theme-color"]');
+
+    function setScreenBg(screen) {
+        const root = document.documentElement;
+        root.classList.remove('screen-game', 'screen-gameover');
+        cosmicBg.classList.remove('bg-game', 'bg-gameover');
+
+        let color;
+        if (screen === 'game') {
+            root.classList.add('screen-game');
+            cosmicBg.classList.add('bg-game');
+            color = '#F5F3F0';
+        } else if (screen === 'gameover') {
+            root.classList.add('screen-gameover');
+            cosmicBg.classList.add('bg-gameover');
+            color = '#E8765A';
+        } else {
+            color = '#2D6A4F';
+        }
+
+        // Force Safari to update browser chrome by removing and re-inserting theme-color
+        const old = document.querySelector('meta[name="theme-color"]');
+        if (old) old.remove();
+        const meta = document.createElement('meta');
+        meta.name = 'theme-color';
+        meta.content = color;
+        document.head.appendChild(meta);
+    }
+
+    function showStartScreen() {
+        startScreen.classList.remove('hidden');
+        gameContainer.style.display = 'none';
+        setScreenBg('start');
+
+        // Update high score on start screen
+        try {
+            const saved = localStorage.getItem('blockRoyaleHighScore');
+            if (saved && startHighScore) startHighScore.textContent = parseInt(saved, 10).toLocaleString();
+        } catch (e) {}
+    }
+
+    function startGame() {
+        // Init and unlock audio on this user gesture (must happen synchronously within tap)
+        if (window.game && window.game.sound) {
+            window.game.sound.init();
+            // _unlock() was called by init(), now play feedback tone
+            window.game.sound.play('button');
+        }
+
+        startScreen.classList.add('hidden');
+        gameContainer.style.display = 'flex';
+        setScreenBg('game');
+
+        // Force a synchronous layout so getBoundingClientRect() works immediately
+        // This is cheaper than double-rAF and doesn't delay interaction
+        gameContainer.offsetHeight; // eslint-disable-line no-unused-expressions
+
+        if (window.game) {
+            window.game.newGame();
+        }
+
+        // Show tutorial on first visit
+        if (!localStorage.getItem('blockRoyaleTutorialDone')) {
+            showTutorial();
+        }
+    }
+
+    // Create game instance
+    window.game = new BlockRoyale();
+
+    // Lightweight hooks for smoke testing and release verification.
+    window.render_game_to_text = () => {
+        const visiblePieces = window.game?.getVisiblePieces?.() ?? [];
+        const totalQueuedPieces = window.game?.pieces?.filter(Boolean).length ?? 0;
+
+        return JSON.stringify({
+            screen: startScreen.classList.contains('hidden') ? 'game' : 'start',
+            score: window.game?.score ?? 0,
+            highScore: window.game?.highScore ?? 0,
+            pieceMode: window.game?.pieceMode ?? 'tray',
+            piecesRemaining: visiblePieces.length,
+            hiddenQueueCount: Math.max(0, totalQueuedPieces - visiblePieces.length),
+            pieces: visiblePieces.map(piece => piece ? {
+                color: piece.color,
+                rows: piece.shape.length,
+                cols: piece.shape[0].length
+            } : null),
+            boardTopRows: (window.game?.board ?? []).slice(0, 3).map(row => row.map(cell => cell ? cell[0] : '.').join('')),
+            modals: {
+                pause: window.game?.pauseModal?.classList.contains('active') ?? false,
+                gameOver: window.game?.gameOverModal?.classList.contains('active') ?? false,
+                leaderboard: window.game?.leaderboardModal?.classList.contains('active') ?? false,
+                settings: document.getElementById('settingsModal')?.classList.contains('active') ?? false,
+                privacy: privacyModal?.classList.contains('active') ?? false,
+            }
+        });
+    };
+    window.advanceTime = (ms = 16) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Apply saved settings
+    window.game.sound.enabled = settings.sound;
+    window.game.hapticsEnabled = settings.haptics;
+    window.game.setPieceMode(settings.pieceMode);
+
+    // Hide game container on load (start screen is visible)
+    gameContainer.style.display = 'none';
+
+    // Play button
+    document.getElementById('playBtn').addEventListener('click', startGame);
+
+    // Home button → back to start screen
+    const homeBtn = document.getElementById('homeBtn');
+    if (homeBtn) {
+        homeBtn.addEventListener('click', () => {
+            window.game.sound.play('button');
+            window.game.gameOverModal.classList.remove('active');
+            window.game.isGameOver = false;
+            showStartScreen();
+        });
+    }
+
+    // Leaderboard from start screen
+    document.getElementById('startLeaderboardBtn').addEventListener('click', () => {
+        window.game.showLeaderboard();
+    });
+
+    const settingsModal = document.getElementById('settingsModal');
+    const openSettings = ({ resumeGame = false } = {}) => {
+        if (resumeGame && window.game) {
+            window.game.isPaused = false;
+            window.game.pauseModal.classList.remove('active');
+        }
+        settingsModal.classList.add('active');
+    };
+
+    // Settings from start screen
+    document.getElementById('startSettingsBtn').addEventListener('click', () => {
+        openSettings();
+    });
+
+    // Settings from pause menu
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => {
+            window.game.sound.play('button');
+            openSettings({ resumeGame: true });
+        });
+    }
+
+    // Close settings
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+    });
+
+    const privacyPolicyBtn = document.getElementById('privacyPolicyBtn');
+    if (privacyPolicyBtn && privacyModal) {
+        privacyPolicyBtn.addEventListener('click', () => {
+            window.game.sound.play('button');
+            privacyModal.classList.add('active');
+        });
+    }
+
+    const closePrivacyBtn = document.getElementById('closePrivacyBtn');
+    if (closePrivacyBtn && privacyModal) {
+        closePrivacyBtn.addEventListener('click', () => {
+            privacyModal.classList.remove('active');
+        });
+    }
+
+    // Sound toggle
+    const soundToggle = document.getElementById('soundToggle');
+    if (!settings.sound) soundToggle.classList.remove('active');
+    soundToggle.addEventListener('click', () => {
+        settings.sound = !settings.sound;
+        soundToggle.classList.toggle('active', settings.sound);
+        window.game.sound.enabled = settings.sound;
+        localStorage.setItem('blockRoyaleSound', settings.sound);
+    });
+
+    // Haptics toggle
+    const hapticsToggle = document.getElementById('hapticsToggle');
+    if (!settings.haptics) hapticsToggle.classList.remove('active');
+    hapticsToggle.addEventListener('click', () => {
+        settings.haptics = !settings.haptics;
+        hapticsToggle.classList.toggle('active', settings.haptics);
+        window.game.hapticsEnabled = settings.haptics;
+        localStorage.setItem('blockRoyaleHaptics', settings.haptics);
+    });
+
+    // Single-piece draw toggle
+    const pieceModeToggle = document.getElementById('pieceModeToggle');
+    const syncPieceModeToggle = () => {
+        const isSinglePieceMode = settings.pieceMode === 'single';
+        pieceModeToggle.classList.toggle('active', isSinglePieceMode);
+        pieceModeToggle.setAttribute('aria-pressed', String(isSinglePieceMode));
+    };
+    syncPieceModeToggle();
+    pieceModeToggle.addEventListener('click', () => {
+        settings.pieceMode = settings.pieceMode === 'single' ? 'tray' : 'single';
+        syncPieceModeToggle();
+        window.game.setPieceMode(settings.pieceMode);
+        localStorage.setItem('blockRoyalePieceMode', settings.pieceMode);
+    });
+
+    // Clear data — uses confirm modal instead of native confirm()
+    const confirmModal = document.getElementById('confirmModal');
+    const confirmYesBtn = document.getElementById('confirmYes');
+    const confirmNoBtn = document.getElementById('confirmNo');
+
+    document.getElementById('clearDataBtn').addEventListener('click', () => {
+        confirmModal.classList.add('active');
+    });
+
+    confirmNoBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+    });
+
+    confirmYesBtn.addEventListener('click', () => {
+        confirmModal.classList.remove('active');
+        localStorage.removeItem('blockRoyaleHighScore');
+        localStorage.removeItem('blockRoyaleLeaderboard');
+        localStorage.removeItem('blockRoyaleTutorialDone');
+        localStorage.removeItem('blockRoyaleSound');
+        localStorage.removeItem('blockRoyaleHaptics');
+        localStorage.removeItem('blockRoyalePieceMode');
+        settings.sound = true;
+        settings.haptics = true;
+        settings.pieceMode = 'tray';
+        soundToggle.classList.add('active');
+        hapticsToggle.classList.add('active');
+        syncPieceModeToggle();
+        window.game.sound.enabled = true;
+        window.game.hapticsEnabled = true;
+        window.game.setPieceMode(settings.pieceMode);
+        window.game.highScore = 0;
+        window.game.updateHighScoreDisplay();
+        window.game.leaderboard.clearScores();
+        if (startHighScore) startHighScore.textContent = '0';
+        document.getElementById('settingsModal').classList.remove('active');
+    });
+
+    // =====================================================
+    // TUTORIAL — ANIMATED HAND
+    // =====================================================
+    function showTutorial() {
+        const el = document.createElement('div');
+        el.className = 'tutorial-overlay';
+        el.innerHTML = `
+            <div class="tutorial-hand"><svg viewBox="0 0 48 48" width="64" height="64" fill="none">
+                <defs>
+                    <linearGradient id="cursorGrad" x1="0" y1="0" x2="0.5" y2="1">
+                        <stop offset="0%" stop-color="#fb923c"/>
+                        <stop offset="100%" stop-color="#2dd4bf"/>
+                    </linearGradient>
+                    <filter id="cursorGlow">
+                        <feGaussianBlur stdDeviation="1.5" result="blur"/>
+                        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                    </filter>
+                </defs>
+                <g filter="url(#cursorGlow)">
+                    <path d="M14 6l20 16-10 2 6 14-5 2-6-14-5 10z"
+                          fill="url(#cursorGrad)" stroke="white" stroke-width="1.5"
+                          stroke-linejoin="round"/>
+                </g>
+            </svg></div>
+            <div class="tutorial-hint">Drag pieces onto the board</div>
+            <div class="tutorial-tap-hint">Tap to skip</div>
+        `;
+        document.body.appendChild(el);
+
+        requestAnimationFrame(() => el.classList.add('visible'));
+
+        function dismiss() {
+            localStorage.setItem('blockRoyaleTutorialDone', 'true');
+            el.classList.remove('visible');
+            setTimeout(() => el.remove(), 300);
+        }
+
+        el.addEventListener('click', dismiss);
+        // Auto-dismiss after 3 animation loops (2.4s each)
+        setTimeout(dismiss, 7200);
     }
 });

@@ -1,12 +1,19 @@
-const CACHE_NAME = 'block-royale-v6';
+const CACHE_NAME = 'block-royale-v24';
 const ASSETS = [
     './',
     './index.html',
     './style.css',
+    './icons.js',
     './game-logic.js',
     './game.js',
-    './levels.js',
-    './manifest.json'
+    './manifest.json',
+    './privacy.html',
+    './apple-touch-icon.png',
+    './icon-192.png',
+    './icon-512.png',
+    './fonts/spline-sans-latin.woff2',
+    './fonts/spline-sans-latin-ext.woff2',
+    './fonts/pirata-one.ttf'
 ];
 
 // Install: cache assets and immediately activate (skip waiting)

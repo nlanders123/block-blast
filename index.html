@@ -8,19 +8,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#22101a">
+    <meta name="theme-color" content="#2D6A4F">
     <meta name="description" content="Block Royale - A neon block puzzle game">
     <title>Block Royale</title>
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Spline+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=25">
 </head>
 
 <body>
@@ -40,25 +33,25 @@
     <!-- Start Screen -->
     <div class="start-screen" id="startScreen">
         <div class="start-content">
-            <h1 class="start-title">BLOCK<br>ROYALE</h1>
-            <div class="start-best-score" id="startBestScore">
-                <span class="material-symbols-outlined" style="font-size: 18px; color: var(--text-muted);">emoji_events</span>
-                <span>BEST: <span id="startHighScore">0</span></span>
+            <div class="start-console">
+                <h1 class="start-title">Block Royale</h1>
+                <p class="start-tagline">Drop blocks. Clear lines. Chase your best.</p>
             </div>
-            <div class="start-buttons">
-                <button class="btn-play" id="playBtn">
-                    <span class="material-symbols-outlined" style="font-size: 28px;">play_arrow</span>
-                    PLAY
-                </button>
-                <div class="start-secondary-buttons">
-                    <button class="btn-start-secondary" id="startLeaderboardBtn">
-                        <span class="material-symbols-outlined">leaderboard</span>
-                        <span>Scores</span>
+            <div class="start-bottom">
+                <div class="start-buttons-row">
+                    <button class="btn-start-icon" id="startLeaderboardBtn" aria-label="Scores">
+                        <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="8" width="5" height="13" rx="1"/></svg></span>
                     </button>
-                    <button class="btn-start-secondary" id="startSettingsBtn">
-                        <span class="material-symbols-outlined">settings</span>
-                        <span>Settings</span>
+                    <button class="btn-play" id="playBtn">
+                        <span class="icon" style="color: inherit;"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" stroke="none"><path d="M8 5.14v14.72a1 1 0 001.5.86l11.5-7.36a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z"/></svg></span>
+                        PLAY
                     </button>
+                    <button class="btn-start-icon" id="startSettingsBtn" aria-label="Settings">
+                        <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                    </button>
+                </div>
+                <div class="start-best-score" id="startBestScore">
+                    <span>BEST: <span id="startHighScore">0</span></span>
                 </div>
             </div>
         </div>
@@ -69,7 +62,7 @@
         <!-- Header -->
         <header class="game-header">
             <button class="btn-icon" id="pauseBtn" aria-label="Pause">
-                <span class="material-symbols-outlined" style="font-size: 28px;">pause</span>
+                <span class="icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="7" y1="5" x2="7" y2="19"/><line x1="17" y1="5" x2="17" y2="19"/></svg></span>
             </button>
 
             <div class="score-display">
@@ -81,9 +74,6 @@
                 </div>
             </div>
 
-            <button class="btn-icon" id="undoBtn" aria-label="Undo">
-                <span class="material-symbols-outlined" style="font-size: 28px;">undo</span>
-            </button>
         </header>
 
         <!-- Game Board -->
@@ -96,6 +86,13 @@
 
         <!-- Piece Tray -->
         <div class="piece-tray">
+            <div class="piece-tray-header">
+                <div>
+                    <p class="tray-label" id="trayLabel">Next Pieces</p>
+                    <p class="tray-help" id="trayHelp">Place all three to draw a fresh set.</p>
+                </div>
+                <span class="tray-badge" id="trayBadge">3 at a time</span>
+            </div>
             <div class="piece-slots" id="pieceSlots">
                 <div class="piece-slot" data-slot="0"></div>
                 <div class="piece-slot" data-slot="1"></div>
@@ -103,16 +100,10 @@
             </div>
         </div>
 
-        <!-- Ghost preview removed — pieces snap directly to grid -->
-
         <div class="modal-overlay" id="gameOverModal">
             <div class="modal-content game-over-style">
-                <span class="material-symbols-outlined star-decoration star-tl">star</span>
-                <span class="material-symbols-outlined star-decoration star-tr">auto_awesome</span>
-                <span class="material-symbols-outlined star-decoration star-br">spark</span>
-
-                <div class="new-high-score" id="newHighScore">
-                    <span class="material-symbols-outlined">star</span>
+<div class="new-high-score" id="newHighScore">
+                    <span class="icon" style="color: #facc15;"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
                 </div>
 
                 <h2 class="modal-title neon-pink">GAME<br>OVER</h2>
@@ -123,18 +114,18 @@
                 </div>
 
                 <div class="best-score-pill">
-                    <span class="material-symbols-outlined" style="font-size: 18px; color: #9ca3af;">emoji_events</span>
+                    <span class="icon" style="color: #9ca3af;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9A6 6 0 0018 9V4H6V9z"/><path d="M6 5H4a1 1 0 00-1 1v1.5A3.5 3.5 0 006.5 11H7"/><path d="M18 5h2a1 1 0 011 1v1.5A3.5 3.5 0 0117.5 11H17"/><line x1="12" y1="15" x2="12" y2="18"/><path d="M8 21h8"/><path d="M8 21l1-3h6l1 3"/></svg></span>
                     <span>BEST: <span id="modalHighScore">0</span></span>
                 </div>
 
                 <div class="modal-buttons">
                     <button class="btn-retry" id="restartBtn">
-                        <span class="material-symbols-outlined" style="color: #022c22;">replay</span>
+                        <span class="icon" style="color: #022c22;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/></svg></span>
                         RETRY
                     </button>
 
                     <button class="btn-home" id="homeBtn">
-                        <span class="material-symbols-outlined">home</span>
+                        <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V9.5"/></svg></span>
                         HOME
                     </button>
                 </div>
@@ -148,31 +139,23 @@
                 <button class="btn-primary" id="resumeBtn">Resume</button>
                 <button class="btn-secondary" id="newGameBtn">New Game</button>
                 <button class="btn-secondary" id="leaderboardBtn">
-                    <span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">leaderboard</span>
+                    <span class="icon" style="vertical-align: middle;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="8" width="5" height="13" rx="1"/></svg></span>
                     Leaderboard
                 </button>
                 <button class="btn-secondary" id="settingsBtn">
-                    <span class="material-symbols-outlined" style="font-size: 20px; vertical-align: middle;">settings</span>
+                    <span class="icon" style="vertical-align: middle;"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
                     Settings
                 </button>
             </div>
         </div>
 
-        <!-- Level Complete Modal (disabled but kept for future) -->
-        <div class="modal-overlay" id="levelCompleteModal">
-            <div class="modal-content">
-                <h2 class="modal-title neon-pink">LEVEL<br>COMPLETE!</h2>
-                <p class="modal-score">Score: <span id="levelScore">0</span></p>
-                <button class="btn-primary" id="nextLevelBtn">Next Level</button>
-            </div>
-        </div>
     </div>
 
     <!-- Global modals (outside game container so they work from start screen too) -->
     <div class="modal-overlay" id="leaderboardModal">
         <div class="modal-content leaderboard-modal">
             <div class="modal-header-row">
-                <span class="material-symbols-outlined" style="font-size: 28px; color: var(--accent-orange);">leaderboard</span>
+                <span class="icon" style="color: var(--accent-orange);"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="8" width="5" height="13" rx="1"/></svg></span>
                 <h2 class="modal-title" style="margin-bottom: 0;">Leaderboard</h2>
             </div>
             <div class="leaderboard-list" id="leaderboardList">
@@ -185,13 +168,13 @@
     <div class="modal-overlay" id="settingsModal">
         <div class="modal-content settings-modal">
             <div class="modal-header-row">
-                <span class="material-symbols-outlined" style="font-size: 28px; color: var(--accent-teal);">settings</span>
+                <span class="icon" style="color: var(--accent-teal);"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
                 <h2 class="modal-title" style="margin-bottom: 0;">Settings</h2>
             </div>
             <div class="settings-list">
                 <div class="settings-row">
                     <div class="settings-label">
-                        <span class="material-symbols-outlined">volume_up</span>
+                        <span class="icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none"/><path d="M15.54 8.46a5 5 0 010 7.08"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg></span>
                         <span>Sound</span>
                     </div>
                     <button class="toggle-btn active" id="soundToggle">
@@ -200,36 +183,75 @@
                 </div>
                 <div class="settings-row">
                     <div class="settings-label">
-                        <span class="material-symbols-outlined">vibration</span>
+                        <span class="icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2"/><line x1="2" y1="8" x2="2" y2="16"/><line x1="4.5" y1="6" x2="4.5" y2="18"/><line x1="22" y1="8" x2="22" y2="16"/><line x1="19.5" y1="6" x2="19.5" y2="18"/></svg></span>
                         <span>Haptics</span>
                     </div>
                     <button class="toggle-btn active" id="hapticsToggle">
                         <span class="toggle-knob"></span>
                     </button>
                 </div>
-                <div class="settings-row">
-                    <div class="settings-label">
-                        <span class="material-symbols-outlined">light_mode</span>
-                        <span>Light Mode</span>
+                <div class="settings-row settings-row-detail">
+                    <div class="settings-label settings-label-detail">
+                        <span class="icon"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5h6"/><path d="M14 7.5h6"/><path d="M4 12h4"/><path d="M12 12h8"/><path d="M4 16.5h8"/><path d="M16 16.5h4"/><rect x="10" y="5.5" width="4" height="4" rx="1" fill="currentColor" stroke="none"/><rect x="8" y="10" width="4" height="4" rx="1" fill="currentColor" stroke="none"/><rect x="12" y="14.5" width="4" height="4" rx="1" fill="currentColor" stroke="none"/></svg></span>
+                        <span class="settings-copy">
+                            <span class="settings-title">Single-piece draw</span>
+                            <span class="settings-caption">Hide the upcoming shapes and play one piece at a time.</span>
+                        </span>
                     </div>
-                    <button class="toggle-btn" id="themeToggle">
+                    <button class="toggle-btn" id="pieceModeToggle" aria-pressed="false" aria-label="Toggle single-piece draw">
                         <span class="toggle-knob"></span>
                     </button>
                 </div>
             </div>
             <button class="btn-danger" id="clearDataBtn">
-                <span class="material-symbols-outlined" style="font-size: 18px;">delete_forever</span>
+                <span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></span>
                 Clear All Data
+            </button>
+            <button class="btn-secondary settings-link-btn" id="privacyPolicyBtn">
+                <span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-2.9 7.8-7 9-4.1-1.2-7-4.5-7-9V7l7-4z"/><path d="M9.5 12.5l1.8 1.8 3.2-4.3"/></svg></span>
+                Privacy Policy
             </button>
             <button class="btn-secondary" id="closeSettingsBtn" style="margin-top: 12px;">Close</button>
         </div>
     </div>
 
+    <div class="modal-overlay" id="privacyModal">
+        <div class="modal-content privacy-modal">
+            <div class="modal-header-row">
+                <span class="icon" style="color: var(--accent-teal);"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-2.9 7.8-7 9-4.1-1.2-7-4.5-7-9V7l7-4z"/><path d="M9.5 12.5l1.8 1.8 3.2-4.3"/></svg></span>
+                <h2 class="modal-title" style="margin-bottom: 0;">Privacy</h2>
+            </div>
+            <p class="privacy-summary">Block Royale does not collect, transmit, or share personal data.</p>
+            <div class="privacy-points">
+                <div class="privacy-point"><strong>No accounts.</strong> No login, sign-up, or cloud profile.</div>
+                <div class="privacy-point"><strong>On-device only.</strong> High scores and settings stay in local storage on your device.</div>
+                <div class="privacy-point"><strong>No tracking.</strong> No analytics, ads, or third-party data collection SDKs.</div>
+            </div>
+            <a class="btn-secondary settings-link-btn" href="privacy.html" target="_blank" rel="noopener">Open Full Privacy Policy</a>
+            <button class="btn-secondary" id="closePrivacyBtn" style="margin-top: 12px;">Close</button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal (replaces native confirm()) -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <h2 class="modal-title">Clear All Data?</h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">This will reset all scores and settings.</p>
+            <div class="modal-buttons">
+                <button class="btn-danger" id="confirmYes">
+                    <span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg></span>
+                    Clear
+                </button>
+                <button class="btn-secondary" id="confirmNo">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Line Clear Effects Container -->
     <div class="effects-container" id="effectsContainer"></div>
-    <script src="levels.js"></script>
-    <script src="game-logic.js"></script>
-    <script src="game.js"></script>
+    <script src="icons.js?v=25"></script>
+    <script src="game-logic.js?v=25"></script>
+    <script src="game.js?v=25"></script>
 </body>
 
 </html>

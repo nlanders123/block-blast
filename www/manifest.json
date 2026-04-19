@@ -1,10 +1,10 @@
 {
-    "name": "Line Crush",
-    "short_name": "LineCrush",
+    "name": "Block Royale",
+    "short_name": "BlockRoyale",
     "start_url": "./index.html",
     "display": "standalone",
-    "background_color": "#0A0E27",
-    "theme_color": "#0A0E27",
+    "background_color": "#22101a",
+    "theme_color": "#22101a",
     "icons": [
         {
             "src": "icon-192.png",

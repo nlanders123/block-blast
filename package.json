@@ -5,14 +5,14 @@
   "main": "index.html",
   "scripts": {
     "test": "jest",
-    "start": "npx serve .",
-    "build": "mkdir -p www && cp index.html style.css game-logic.js game.js levels.js manifest.json service-worker.js apple-touch-icon.png icon-192.png icon-512.png www/ 2>/dev/null; true",
+    "start": "python3 -m http.server 3000 --bind 127.0.0.1",
+    "build": "mkdir -p www/fonts && cp index.html style.css icons.js game-logic.js game.js manifest.json service-worker.js apple-touch-icon.png icon.png icon-192.png icon-512.png privacy.html www/ 2>/dev/null; cp fonts/*.woff2 fonts/*.ttf www/fonts/ 2>/dev/null; true",
     "cap:init": "npx cap init BlockRoyale com.blockroyale.app --web-dir www",
     "cap:add:ios": "npx cap add ios",
     "cap:add:android": "npx cap add android",
-    "cap:sync": "npx cap sync",
-    "cap:open:ios": "npx cap open ios",
-    "cap:open:android": "npx cap open android"
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:ios": "npm run cap:sync && npx cap open ios",
+    "cap:open:android": "npm run cap:sync && npx cap open android"
   },
   "keywords": [
     "game",
@@ -23,13 +23,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@capacitor/core": "^5.0.0"
+    "@capacitor/core": "^8.3.0"
   },
   "devDependencies": {
-    "@capacitor/android": "^5.0.0",
+    "@capacitor/android": "^8.3.0",
     "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^5.0.0",
-    "@capacitor/ios": "^5.0.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "jest": "^30.3.0",
     "playwright": "^1.58.2"
   }

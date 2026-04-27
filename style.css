@@ -1,23 +1,31 @@
 /* =====================================================
-   BLOCK ROYALE — Design System v3 (Cozy Cream)
-   Warm cream base, pastel clay blocks, deep-purple ink,
-   coral CTA. Aesthetic target: mockup series 2026-04-23.
+   BLOCK ROYALE — Design System
+   Clean candy minimalism with jewel-tone blocks
    ===================================================== */
 
 /* Self-hosted fonts (offline-safe) */
 @font-face {
-    font-family: 'Bagel Fat One';
+    font-family: 'Pirata One';
     font-style: normal;
     font-weight: 400;
     font-display: swap;
-    src: url(fonts/bagel-fat-one.woff2) format('woff2');
+    src: url(fonts/pirata-one.ttf) format('truetype');
 }
 @font-face {
-    font-family: 'Fredoka';
+    font-family: 'Spline Sans';
     font-style: normal;
     font-weight: 300 700;
     font-display: swap;
-    src: url(fonts/fredoka-latin.woff2) format('woff2');
+    src: url(fonts/spline-sans-latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Spline Sans';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url(fonts/spline-sans-latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 /* Custom SVG icon base */
 .icon {
@@ -28,159 +36,120 @@
     line-height: 1;
 }
 
-/* CSS Custom Properties — v3 Cozy Cream theme */
+/* CSS Custom Properties — v2 Candy theme (Block Blast playbook) */
 :root {
-    /* Block colours — punchier pastels. Still pastel in character, but with
-       enough chroma to read on-device. */
-    --color-red:    #F08978;   /* coral-rose, more pink pop */
-    --color-orange: #F09568;   /* peach, warmer */
-    --color-yellow: #F2C44E;   /* butter, more saturated */
-    --color-green:  #A8D67F;   /* sage, more yellow-green */
-    --color-teal:   #8DD4B6;   /* mint, more chroma */
-    --color-blue:   #8DBCEA;   /* sky, more blue */
-    --color-purple: #B593D8;   /* lavender, more purple */
+    /* Block colours — vivid candy primaries (matches docs/DESIGN_v2.md + icon) */
+    --color-red:    #ef4444;
+    --color-orange: #f97316;
+    --color-yellow: #fbbf24;
+    --color-green:  #22c55e;
+    --color-teal:   #14b8a6;
+    --color-blue:   #3b82f6;
+    --color-purple: #a855f7;
 
-    /* Block side colours — darker hue per block for "rendered cube" 3D look.
-       Each is ~25-30% darker/more saturated than its top-face. Without this
-       the bottom edge reads as generic brown shading; with this it reads
-       as the visible side wall of a real cube. */
-    --side-red:    #C8624F;
-    --side-orange: #C66B3C;
-    --side-yellow: #C99020;
-    --side-green:  #6FA34C;
-    --side-teal:   #56A187;
-    --side-blue:   #5A8AB8;
-    --side-purple: #8362A8;
-    --side-grey:   #6B7280;
+    /* Screen backgrounds — three-screen color story (green→blue→coral)
+       Each gradient has a deliberate HUE shift, not just value, so all three
+       screens feel equally atmospheric. */
+    --bg-start: #10b981;          /* emerald-500 */
+    --bg-start-deep: #065f46;     /* emerald-800 (hue shifts toward teal) */
+    --bg-game: #2563eb;           /* blue-600 */
+    --bg-game-deep: #312e81;      /* indigo-900 (hue shifts toward purple) */
+    --bg-gameover: #f97066;       /* coral */
+    --bg-gameover-deep: #c2410c;  /* orange-700 (hue shifts toward amber) */
 
-    /* Backgrounds — unified warm peach-cream across all screens.
-       Leans pink/peach (not sandy yellow). Match mockup 2026-04-23. */
-    --bg-cream:       #F4D8B5;
-    --bg-cream-deep:  #EEC896;
-    --bg-start:       var(--bg-cream);
-    --bg-start-deep:  var(--bg-cream-deep);
-    --bg-game:        var(--bg-cream);
-    --bg-game-deep:   var(--bg-cream-deep);
-    --bg-gameover:    var(--bg-cream);
-    --bg-gameover-deep: var(--bg-cream-deep);
+    /* Surfaces — light cards on rich background */
+    --bg-dark: #1e40af;
+    --bg-darker: #1e3a8a;
+    --bg-darkest: #312e81;
+    --bg-board: rgba(255, 255, 255, 0.08);
+    --bg-cell: rgba(255, 255, 255, 0.10);
+    --surface-strong: rgba(255, 255, 255, 0.16);
+    --surface-soft: rgba(255, 255, 255, 0.08);
+    --surface-border: rgba(255, 255, 255, 0.18);
+    --surface-border-strong: rgba(255, 255, 255, 0.28);
+    --surface-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    --card-bg: #ffffff;
+    --card-bg-soft: rgba(255, 255, 255, 0.96);
 
-    /* Surfaces — opaque cream cards, warm drop shadow */
-    --surface-card:     #FBF0DA;       /* modals, score pill, piece tray interior */
-    --surface-card-soft:#F6E3C1;       /* secondary surface */
-    --surface-tray:     #EBD3AD;       /* board + piece tray recess */
-    --surface-tray-line:rgba(140, 95, 50, 0.14);   /* grid dividers */
-    --surface-border:   rgba(140, 95, 50, 0.10);   /* subtle edges */
-    --surface-border-strong: rgba(140, 95, 50, 0.20);
+    /* Text */
+    --text-primary: #ffffff;
+    --text-on-card: #0f172a;
+    --text-muted: rgba(255, 255, 255, 0.72);
+    --text-muted-on-card: #475569;
 
-    --bg-board:  var(--surface-tray);
-    --bg-cell:   rgba(120, 85, 45, 0.06);
+    /* Accent — celebratory warm */
+    --accent-orange: #fb923c;
+    --accent-teal: #2dd4bf;
+    --accent-green: #22c55e;
+    --accent-gold: #fbbf24;
 
-    --card-bg:      var(--surface-card);
-    --card-bg-soft: var(--surface-card-soft);
-
-    /* Ink — deep cool indigo-purple (cooler than before, matches mockup) */
-    --ink-deep:     #3A2352;
-    --ink-soft:     #574270;
-    --ink-muted:    #A396B3;
-    --ink-grey:     #9188A0;
-
-    --text-primary:       var(--ink-deep);
-    --text-on-card:       var(--ink-deep);
-    --text-muted:         var(--ink-muted);
-    --text-muted-on-card: var(--ink-muted);
-
-    /* Accent — coral CTA, pastel secondary pills, warm gold */
-    --accent-coral:        #EC7560;
-    --accent-coral-hi:     #F28D7A;
-    --accent-coral-dk:     #C85A48;
-    --accent-mint:         #BEDDC6;
-    --accent-mint-dk:      #8FB89A;   /* darker mint for raised-button side */
-    --accent-lavender:     #CDB8E4;
-    --accent-lavender-dk:  #A189C0;   /* darker lavender for raised-button side */
-    --accent-gold:      #F5C94F;
-    --accent-star:      #E26E55;
-
-    /* Legacy accent names kept so existing selectors still resolve */
-    --accent-orange: var(--accent-coral);
-    --accent-teal:   var(--accent-mint);
-    --accent-green:  var(--color-green);
-    --accent-pink:   var(--accent-coral);
-
-    /* Layout — board sized to match mockup proportions (not edge-to-edge) */
-    --board-size: min(90vw, 390px);
+    /* Layout */
+    --board-size: min(92vw, 360px);
     --cell-size: calc((var(--board-size) - 24px - 42px) / 8);
-    --cell-gap: 5px;
+    --cell-gap: 6px;
 
-    /* Rendered-cube block recipe. Top highlight + side highlights only — the
-       bottom side is added per-color via --side (see .cell.filled.color-*).
-       Result: each colour has its own visible "side wall" instead of generic brown. */
+    /* Candy block recipe — punchy 3D rim */
     --shadow-rim:
-        inset 0 3px 0 rgba(255, 255, 255, 0.65),
-        inset 4px 0 0 rgba(255, 255, 255, 0.18),
-        inset -3px -1px 0 rgba(0, 0, 0, 0.06);
-    --shadow-block-drop: 0 5px 7px rgba(120, 60, 30, 0.38), 0 1px 2px rgba(120, 60, 30, 0.22);
+        inset 0 4px 0 rgba(255, 255, 255, 0.40),
+        inset 0 -4px 0 rgba(0, 0, 0, 0.22);
+    --shadow-block-drop: 0 3px 6px rgba(0, 0, 0, 0.20);
 
-    /* Card + tray shadows — warm, never grey-black */
-    --shadow-card:
-        0 6px 18px rgba(120, 85, 45, 0.18),
-        0 2px 4px rgba(120, 85, 45, 0.10);
-    --shadow-card-lg:
-        0 18px 40px rgba(120, 85, 45, 0.22),
-        0 4px 10px rgba(120, 85, 45, 0.12);
-    --shadow-tray-inset:
-        inset 0 2px 6px rgba(120, 85, 45, 0.15),
-        inset 0 -1px 0 rgba(255, 255, 255, 0.60);
+    /* Friendly rounded font stack — uses iOS SF Pro Rounded natively, no download needed */
+    --font-game: 'SF Pro Rounded', 'Nunito', 'Fredoka', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
 
-    /* Float shadows — consistent hovering feel across UI elements.
-       Warm brown-tinted so they sit on the peach-cream bg naturally.
-       Two-layer stack: tight for contact, soft for atmosphere. */
-    --float-sm:
-        0 3px 6px rgba(120, 60, 30, 0.16),
-        0 1px 2px rgba(120, 60, 30, 0.10);
-    --float-md:
-        0 6px 14px rgba(120, 60, 30, 0.22),
-        0 2px 4px rgba(120, 60, 30, 0.14);
-    --float-lg:
-        0 12px 28px rgba(120, 60, 30, 0.26),
-        0 4px 8px rgba(120, 60, 30, 0.16);
-
-    /* Coral CTA — press-down feel with hard bottom edge */
-    --shadow-cta:
-        inset 0 2px 0 var(--accent-coral-hi),
-        inset 0 -4px 0 var(--accent-coral-dk),
-        0 6px 0 rgba(200, 90, 72, 0.35),
-        0 12px 24px rgba(200, 90, 72, 0.22);
-
-    /* Font stacks — display is Bagel Fat One (inflated bubble display,
-       single weight 400), UI is Fredoka (rounded sans). */
-    --font-display: 'Bagel Fat One', 'Sigmar', 'Recoleta', Georgia, serif;
-    --font-game:    'Fredoka', 'SF Pro Rounded', 'Nunito', -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', sans-serif;
-
-    /* Unified radius scale */
-    --radius-cell:    10px;      /* blocks, empty grid cells (rounder = pillow look) */
-    --radius-chip:    14px;
-    --radius-card-sm: 22px;
-    --radius-card:    26px;
-    --radius-card-lg: 34px;
-    --radius-pill:    999px;
-    --radius-circle:  50%;
+    /* Unified radius scale — use tokens everywhere; avoid hardcoded values */
+    --radius-cell:    6px;       /* blocks, empty grid cells */
+    --radius-chip:    12px;      /* tiny chips (badges) */
+    --radius-card-sm: 20px;      /* medium cards (pills, best-score pill) */
+    --radius-card:    24px;      /* cards (score panel, piece tray, modals) */
+    --radius-card-lg: 32px;      /* hero cards (game-over modal) */
+    --radius-pill:    999px;     /* buttons */
+    --radius-circle:  50%;       /* circular icon buttons */
 
     /* Unified type scale */
-    --fs-title:       64px;
-    --fs-title-sm:    30px;
-    --fs-score-xl:    72px;
-    --fs-score:       32px;
-    --fs-button:      18px;
-    --fs-button-lg:   22px;
+    --fs-title:       64px;      /* screen titles (Block Royale, GAME OVER) */
+    --fs-title-sm:    30px;      /* secondary titles (Paused, Leaderboard) */
+    --fs-score-xl:    64px;      /* game-over final score */
+    --fs-score:       44px;      /* in-game score */
+    --fs-button:      18px;      /* primary CTAs */
+    --fs-button-lg:   20px;      /* hero CTAs (Retry) */
     --fs-body:        14px;
-    --fs-label:       11px;
+    --fs-label:       11px;      /* small caps labels */
 
     --fw-body:        500;
     --fw-label:       700;
-    --fw-strong:      700;
-    --fw-display:     700;       /* Fredoka caps at 700 */
-    --tracking-title: -0.5px;
-    --tracking-label: 2px;
+    --fw-strong:      800;
+    --fw-display:     900;
+    --tracking-title: -1.5px;
+    --tracking-label: 2.2px;
+
+    /* Liquid Glass recipe (iOS 26 style).
+       Key principles (from Apple + css-tricks research):
+       - Blur is SUBTLE (~8px), not heavy frost. Liquid glass reveals colour
+         behind it, doesn't obscure it.
+       - Saturation boost (~200%) and slight brightness punch up the colour
+         bleed — so the gradient's personality shows through the plate.
+       - A bright crisp border (~0.7 white) catches light like real glass edge.
+       - Specular highlights (via ::before shine) are what separate Liquid Glass
+         from generic glassmorphism. */
+    --glass-bg:            rgba(255, 255, 255, 0.14);
+    --glass-bg-readable:   rgba(255, 255, 255, 0.34);
+    --glass-border:        1px solid rgba(255, 255, 255, 0.7);
+    --glass-blur:          blur(8px) saturate(200%) brightness(1.08);
+    --glass-inner-hi:      inset 0 1px 0 rgba(255, 255, 255, 0.65),
+                           inset 0 -1px 0 rgba(255, 255, 255, 0.18),
+                           inset -10px -8px 20px -12px rgba(255, 255, 255, 0.55),
+                           inset  10px -8px 20px -12px rgba(255, 255, 255, 0.35);
+    --glass-outer-shadow:  0 20px 40px -12px rgba(0, 0, 0, 0.25),
+                           0 4px 12px -2px rgba(0, 0, 0, 0.12);
+
+    /* Reusable specular-highlight overlay applied via ::before on cards.
+       The top 40% of the card gets a soft white gradient, simulating the
+       reflection of light on a glass surface. */
+    --glass-shine: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.42) 0%,
+        rgba(255, 255, 255, 0.14) 35%,
+        rgba(255, 255, 255, 0) 75%);
 
     /* Animation */
     --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
@@ -194,30 +163,36 @@
     padding: 0;
 }
 
-/* Unified cream background across all screens. The soft radial highlight
-   in the top-left gives gentle dimensionality without looking like a gradient. */
+/* Shared atmospheric highlight — soft "lit from above" ellipse that makes
+   every screen feel dimensional instead of flat. Combined with the gradient,
+   this is the depth recipe used on all three screens. */
 html {
     height: 100%;
     height: -webkit-fill-available;
     background:
-        radial-gradient(ellipse at 28% 12%, rgba(255, 255, 255, 0.45), transparent 60%),
-        var(--bg-cream);
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg-start) 0%, var(--bg-start-deep) 100%);
 }
 
 html.screen-game,
-html.screen-game body,
+html.screen-game body {
+    background:
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.12), transparent 55%),
+        linear-gradient(180deg, var(--bg-game) 0%, var(--bg-game-deep) 100%) !important;
+}
+
 html.screen-gameover,
 html.screen-gameover body {
     background:
-        radial-gradient(ellipse at 28% 12%, rgba(255, 255, 255, 0.45), transparent 60%),
-        var(--bg-cream) !important;
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg-gameover) 0%, var(--bg-gameover-deep) 100%) !important;
 }
 
 body {
     font-family: var(--font-game);
     background:
-        radial-gradient(ellipse at 28% 12%, rgba(255, 255, 255, 0.45), transparent 60%),
-        var(--bg-cream);
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg-start) 0%, var(--bg-start-deep) 100%);
     color: var(--text-primary);
     display: flex;
     justify-content: center;
@@ -244,15 +219,20 @@ body {
     z-index: -1;
     overflow: hidden;
     background:
-        radial-gradient(ellipse at 28% 12%, rgba(255, 255, 255, 0.45), transparent 60%),
-        var(--bg-cream);
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg-start) 0%, var(--bg-start-deep) 100%);
 }
 
-.cosmic-bg.bg-game,
+.cosmic-bg.bg-game {
+    background:
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.12), transparent 55%),
+        linear-gradient(180deg, var(--bg-game) 0%, var(--bg-game-deep) 100%);
+}
+
 .cosmic-bg.bg-gameover {
     background:
-        radial-gradient(ellipse at 28% 12%, rgba(255, 255, 255, 0.45), transparent 60%),
-        var(--bg-cream);
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, 0.14), transparent 55%),
+        linear-gradient(180deg, var(--bg-gameover) 0%, var(--bg-gameover-deep) 100%);
 }
 
 .cosmic-bg::before,
@@ -276,12 +256,12 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
-    padding: 12px;
-    padding-top: max(6px, env(safe-area-inset-top));
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    gap: 18px;
+    padding: 18px;
+    padding-top: max(24px, env(safe-area-inset-top));
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
     width: 100%;
-    max-width: 460px;
+    max-width: 430px;
     height: 100%;
     max-height: 100vh;
     max-height: 100dvh;
@@ -297,32 +277,26 @@ body {
     justify-content: space-between;
     align-items: center;
     width: 100%;
-    gap: 8px;
     padding: 0 2px;
 }
 
 .btn-icon {
-    width: 52px;
-    height: 52px;
+    width: 48px;
+    height: 48px;
     border: 1px solid var(--surface-border);
     border-radius: 50%;
-    background: var(--surface-card);
-    color: var(--ink-deep);
+    background: var(--surface-soft);
+    color: var(--text-primary);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: var(--transition-fast);
-    box-shadow:
-        inset 0 -3px 0 rgba(120, 85, 45, 0.10),
-        var(--float-md);
 }
 
 .btn-icon:active {
-    transform: translateY(2px);
-    box-shadow:
-        inset 0 -1px 0 rgba(120, 85, 45, 0.10),
-        var(--float-sm);
+    background: var(--surface-strong);
+    transform: scale(0.92);
 }
 
 .btn-icon svg {
@@ -330,79 +304,64 @@ body {
     height: 22px;
 }
 
-/* Header score — single horizontal cream pill with star to the right of the
-   number. Matches mockup layout. */
 .score-display {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-width: 0;
-    flex: 0 1 auto;
-    padding: 10px 24px;
-    border: 1px solid var(--surface-border);
-    border-radius: var(--radius-pill);
-    background: var(--surface-card);
+    gap: 3px;
+    min-width: 126px;
+    padding: 14px 18px 12px;
+    border: var(--glass-border);
+    border-radius: var(--radius-card);
+    background: var(--glass-bg-readable);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
     box-shadow:
-        inset 0 -3px 0 rgba(140, 95, 50, 0.10),
-        var(--float-md);
+        var(--glass-inner-hi),
+        var(--glass-outer-shadow);
     position: relative;
-}
-
-.score-display::after {
-    content: '★';
-    color: var(--accent-star);
-    font-size: 22px;
-    line-height: 1;
-    margin-left: 2px;
-    text-shadow: 0 1px 0 rgba(200, 90, 72, 0.25);
+    overflow: hidden;
+    isolation: isolate;
 }
 
 .score-label {
-    display: none;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted-on-card);
+    letter-spacing: 2.4px;
+    text-transform: uppercase;
 }
 
 .score-value {
-    font-family: var(--font-display);
-    font-size: 28px;
-    font-weight: 400;
-    color: var(--ink-deep);
-    letter-spacing: 0;
+    font-size: 44px;
+    font-weight: 800;
+    color: var(--text-on-card);
+    letter-spacing: -1.5px;
     line-height: 1;
 }
 
-/* BEST pill — smaller cream pill, "Best" label + number inline */
 .high-score {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 6px;
-    padding: 10px 14px;
-    background: var(--surface-card);
-    border-radius: var(--radius-pill);
-    border: 1px solid var(--surface-border);
-    box-shadow:
-        inset 0 -3px 0 rgba(140, 95, 50, 0.10),
-        var(--float-md);
-    position: static;
-    margin: 0;
-    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 1px;
+    padding: 4px 10px;
+    background: rgba(15, 23, 42, 0.06);
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .high-score-label {
-    font-family: var(--font-game);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--ink-muted);
-    letter-spacing: 0;
-    text-transform: none;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted-on-card);
+    letter-spacing: 1px;
 }
 
 .high-score-value {
-    font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 400;
-    color: var(--ink-muted);
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-muted-on-card);
 }
 
 /* =====================================================
@@ -423,13 +382,13 @@ body {
 }
 
 .board-frame {
-    background: var(--surface-tray);
+    background: var(--bg-board);
     border: 1px solid var(--surface-border);
     border-radius: var(--radius-card-lg);
     padding: 14px;
     box-shadow:
-        var(--shadow-tray-inset),
-        var(--float-lg);
+        0 8px 32px rgba(0, 0, 0, 0.25),
+        inset 0 2px 8px rgba(0, 0, 0, 0.15);
     position: relative;
     z-index: 1;
 }
@@ -444,12 +403,11 @@ body {
     touch-action: none;
 }
 
-/* Empty cell — lighter cream well, slight inset so grid reads distinct from tray */
+/* Empty cell */
 .cell {
-    background: rgba(255, 248, 228, 0.55);
-    border-radius: var(--radius-cell);
-    border: 1px solid rgba(140, 95, 50, 0.08);
-    box-shadow: inset 0 1px 2px rgba(140, 95, 50, 0.06);
+    background: var(--bg-cell);
+    border-radius: 6px;
+    border: none;
     transition: var(--transition-fast);
     position: relative;
     overflow: hidden;
@@ -529,37 +487,34 @@ body {
 }
 
 /* =====================================================
-   FILLED BLOCKS — v3 Clay pillow recipe
-   Soft pastel fills with a subtle top highlight, bottom shadow,
-   and a warm drop shadow. No gloss, no wet-candy shine.
+   FILLED BLOCKS — v2 Candy recipe (matches docs/DESIGN_v2.md + icon)
    ===================================================== */
 .cell.filled {
     border: none;
     box-shadow:
         var(--shadow-rim),
-        inset 0 -10px 0 var(--side, rgba(60, 30, 10, 0.32)),  /* per-colour side wall */
         var(--shadow-block-drop);
-    border-radius: var(--radius-cell);
+    border-radius: 6px;
     background-image: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.32) 0%,
-        rgba(255, 255, 255, 0) 50%,
-        rgba(0, 0, 0, 0.04) 100%);
+        rgba(255, 255, 255, 0.18) 0%,
+        rgba(255, 255, 255, 0) 45%,
+        rgba(0, 0, 0, 0.08) 100%);
 }
 
-/* Pronounced top highlight — clay pillow gloss */
+/* Glossy top highlight — gives the "wet candy" look */
 .cell.filled::after {
     content: '';
     position: absolute;
-    top: 12%;
-    left: 14%;
-    right: 14%;
+    top: 8%;
+    left: 12%;
+    right: 12%;
     height: 22%;
     border-radius: 999px;
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.45) 0%,
         rgba(255, 255, 255, 0) 100%);
     pointer-events: none;
-    filter: blur(1.5px);
+    filter: blur(1px);
 }
 
 /* Landing bounce — block wobbles into place */
@@ -583,17 +538,7 @@ body {
 .cell.color-green   { background: var(--color-green);  --glow: var(--color-green); }
 .cell.color-yellow  { background: var(--color-yellow); --glow: var(--color-yellow); }
 
-/* Per-colour side wall — sets --side which .cell.filled picks up in its inset bottom shadow.
-   Each block now reads as a rendered cube with a visible side, not a flat puffy tile. */
-.cell.color-red,    .cell.filled.color-red    { --side: var(--side-red);    }
-.cell.color-orange, .cell.filled.color-orange { --side: var(--side-orange); }
-.cell.color-yellow, .cell.filled.color-yellow { --side: var(--side-yellow); }
-.cell.color-green,  .cell.filled.color-green  { --side: var(--side-green);  }
-.cell.color-cyan,   .cell.filled.color-cyan   { --side: var(--side-teal);   }
-.cell.color-blue,   .cell.filled.color-blue   { --side: var(--side-blue);   }
-.cell.color-purple, .cell.filled.color-purple { --side: var(--side-purple); }
-
-/* Kept for override-priority safety — .cell.filled already has the right shadow stack. */
+/* Bold shadow per block — already covered in .cell.filled, kept as override safety */
 .cell.filled.color-purple,
 .cell.filled.color-cyan,
 .cell.filled.color-orange,
@@ -603,17 +548,13 @@ body {
 .cell.filled.color-yellow {
     box-shadow:
         var(--shadow-rim),
-        inset 0 -10px 0 var(--side, rgba(60, 30, 10, 0.32)),
         var(--shadow-block-drop);
 }
 
 .cell.color-grey,
 .cell.obstacle {
     background: #4b5563;
-    --side: var(--side-grey);
-    box-shadow:
-        var(--shadow-rim),
-        inset 0 -10px 0 var(--side);
+    box-shadow: var(--shadow-rim);
 }
 
 /* =====================================================
@@ -681,31 +622,61 @@ body {
    ===================================================== */
 .piece-tray {
     width: 100%;
-    padding: 18px 12px 20px;
-    background: var(--surface-card-soft);
-    border: 1px solid var(--surface-border);
+    padding: 14px 14px 16px;
+    background: var(--glass-bg-readable);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
     border-radius: var(--radius-card);
     box-shadow:
-        var(--shadow-tray-inset),
-        var(--float-md);
+        var(--glass-inner-hi),
+        var(--glass-outer-shadow);
     position: relative;
+    overflow: hidden;
+    isolation: isolate;
 }
 
-/* Mockup hides the tray header entirely — piece tray is just the slots */
 .piece-tray-header {
-    display: none;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
-.tray-label { display: none; }
-.tray-help { display: none; }
-.tray-badge { display: none; }
+.tray-label {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--text-on-card);
+}
+
+.tray-help {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--text-muted-on-card);
+}
+
+.tray-badge {
+    flex-shrink: 0;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(15, 23, 42, 0.04);
+    color: var(--text-muted-on-card);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+}
 
 .piece-slots {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    gap: 8px;
-    min-height: 108px;
+    gap: 10px;
+    min-height: 80px;
 }
 
 .piece-slots.single-piece-mode {
@@ -717,8 +688,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 108px;
-    max-width: none;
+    min-height: 80px;
+    max-width: 100px;
     border: none;
     background: transparent;
     border-radius: 16px;
@@ -744,16 +715,12 @@ body {
 /* Draggable Piece */
 .piece {
     display: grid;
-    gap: 3px;
+    gap: 2px;
     cursor: grab;
     transition: transform var(--transition-fast), opacity var(--transition-fast);
     touch-action: none;
     -webkit-touch-callout: none;
     animation: piece-idle 2.5s ease-in-out infinite;
-    /* Group float shadow — makes the whole piece read as hovering above tray */
-    filter:
-        drop-shadow(0 6px 6px rgba(120, 60, 30, 0.22))
-        drop-shadow(0 2px 2px rgba(120, 60, 30, 0.14));
 }
 
 /* Subtle idle wobble — makes pieces feel alive in the tray */
@@ -779,36 +746,29 @@ body {
 }
 
 .piece-cell {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: none;
-    /* No drop shadow — the parent .piece has a filter drop-shadow that
-       creates a unified group float. Per-cell inset rim handles the 3D. */
-    box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.70),
-        inset 0 -4px 0 rgba(60, 30, 10, 0.28);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.25);
+    border-bottom-color: rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-rim);
     position: relative;
-    background-image: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.32) 0%,
-        rgba(255, 255, 255, 0) 45%,
-        rgba(60, 30, 10, 0.18) 100%);
 }
 
-/* Top pillow highlight on tray pieces */
+/* Clean top shine on tray pieces */
 .piece-cell::after {
     content: '';
     position: absolute;
-    top: 12%;
-    left: 14%;
-    right: 14%;
-    height: 24%;
-    border-radius: 999px;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    border-radius: 3px 3px 0 0;
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.2) 0%,
         rgba(255, 255, 255, 0) 100%);
     pointer-events: none;
-    filter: blur(1px);
 }
 
 /* =====================================================
@@ -820,43 +780,33 @@ body {
     pointer-events: none;
     display: grid;
     gap: var(--cell-gap);
-    /* Stronger lift shadow while dragging — finger is holding it above the board */
-    filter:
-        drop-shadow(0 10px 10px rgba(120, 60, 30, 0.30))
-        drop-shadow(0 3px 4px rgba(120, 60, 30, 0.18));
 }
 
 .drag-clone .drag-cell {
     width: 100%;
     height: 100%;
-    border-radius: var(--radius-cell);
-    border: none;
-    /* No drop shadow — parent .drag-clone has a filter drop-shadow for group lift */
-    box-shadow:
-        inset 0 3px 0 rgba(255, 255, 255, 0.70),
-        inset 0 -5px 0 rgba(60, 30, 10, 0.28);
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-top-color: rgba(255, 255, 255, 0.25);
+    border-bottom-color: rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-rim);
     position: relative;
-    opacity: 0.95;
-    background-image: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.32) 0%,
-        rgba(255, 255, 255, 0) 45%,
-        rgba(60, 30, 10, 0.18) 100%);
+    opacity: 0.85;
 }
 
-/* Top pillow highlight on drag clone */
+/* Clean top shine on drag clone */
 .drag-clone .drag-cell::after {
     content: '';
     position: absolute;
-    top: 12%;
-    left: 14%;
-    right: 14%;
-    height: 22%;
-    border-radius: 999px;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    border-radius: 4px 4px 0 0;
     background: linear-gradient(180deg,
-        rgba(255, 255, 255, 0.55) 0%,
+        rgba(255, 255, 255, 0.2) 0%,
         rgba(255, 255, 255, 0) 100%);
     pointer-events: none;
-    filter: blur(1.5px);
 }
 
 /* Clone cell colours */
@@ -1013,9 +963,9 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(120, 85, 45, 0.28);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    background: rgba(30, 27, 75, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1031,18 +981,23 @@ body {
 }
 
 .modal-content {
-    background: var(--surface-card);
-    border: 1px solid var(--surface-border);
+    background: var(--glass-bg-readable);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
     border-radius: var(--radius-card-lg);
     position: relative;
-    overflow: visible;
-    padding: 40px 32px 32px;
+    overflow: hidden;
+    isolation: isolate;
+    padding: 36px 28px;
     text-align: center;
     transform: scale(0.9) translateY(20px);
     transition: var(--transition-medium);
-    box-shadow: var(--shadow-card-lg);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
     min-width: 320px;
     max-width: 90vw;
+    position: relative;
+    overflow: hidden;
 }
 
 /* .modal-content::before is defined earlier as the liquid-glass specular shine — do not override */
@@ -1052,50 +1007,37 @@ body {
 }
 
 .modal-title {
-    font-family: var(--font-display);
-    font-size: 28px;
-    font-weight: 400;
-    color: var(--ink-deep);
+    font-family: var(--font-game);
+    font-size: var(--fs-title-sm);
+    font-weight: var(--fw-strong);
+    color: var(--text-on-card);
     margin-bottom: 20px;
-    letter-spacing: 0;
+    letter-spacing: -0.5px;
 }
 
-/* "Nice run!" — game over title, 3D clay extruded */
 .modal-title.neon-pink {
-    font-family: var(--font-display);
-    font-weight: 400;
+    font-family: var(--font-game);
+    font-weight: var(--fw-display);
     font-style: normal;
-    font-size: 36px;
-    line-height: 1;
-    background: linear-gradient(180deg,
-        #8E66C2 0%,
-        #6E48A0 25%,
-        #4A2A72 65%,
-        #3A2352 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    text-shadow:
-        0 1px 0 #2F1B45,
-        0 2px 0 #2C1940,
-        0 3px 0 #29173D,
-        0 4px 0 #261538,
-        0 8px 12px rgba(60, 25, 90, 0.35);
-    margin-bottom: 18px;
+    font-size: var(--fs-title);
+    line-height: 0.9;
+    color: white;
+    -webkit-text-stroke: 3px rgba(0, 0, 0, 0.22);
+    paint-order: stroke fill;
+    margin-bottom: 30px;
     text-transform: none;
-    letter-spacing: 0.5px;
+    letter-spacing: var(--tracking-title);
     transform: none;
 }
 
-/* Game over modal — cream card (overlay stays separate) */
+/* Game over modal — sunset coral background */
 .game-over-style {
-    background: var(--surface-card);
-    border-color: var(--surface-border);
+    background: linear-gradient(180deg, var(--bg-gameover) 0%, var(--bg-gameover-deep) 100%);
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
-#gameOverModal .modal-content {
-    background: var(--surface-card);
+#gameOverModal {
+    background: linear-gradient(180deg, var(--bg-gameover) 0%, var(--bg-gameover-deep) 100%);
 }
 
 /* Star decorations on game over modal */
@@ -1139,53 +1081,38 @@ body {
 }
 
 .score-label-small {
-    display: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.7);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+    text-transform: uppercase;
 }
 
 .modal-score-large {
-    font-family: var(--font-display);
-    font-size: 80px;
-    font-weight: 400;
-    background: linear-gradient(180deg,
-        #8E66C2 0%,
-        #6E48A0 25%,
-        #4A2A72 65%,
-        #3A2352 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    color: transparent;
-    text-shadow:
-        0 1px 0 #2F1B45,
-        0 2px 0 #2C1940,
-        0 3px 0 #29173D,
-        0 4px 0 #261538,
-        0 5px 0 #231333,
-        0 6px 0 #20112C,
-        0 7px 0 #1D0F28,
-        0 8px 0 #1A0D23,
-        0 16px 22px rgba(60, 25, 90, 0.40);
+    font-size: 64px;
+    font-weight: 900;
+    color: white;
     line-height: 1;
-    letter-spacing: 0;
-    margin-bottom: 6px;
+    letter-spacing: -2px;
 }
 
 .best-score-pill {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--ink-muted);
-    margin-bottom: 28px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-pill);
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 40px;
 }
 
 .best-score-pill svg {
-    display: none;
+    color: rgba(255, 255, 255, 0.7);
 }
 
 .modal-buttons {
@@ -1195,42 +1122,32 @@ body {
     width: 100%;
 }
 
-/* Coral primary CTA — cream text, pillowy press-down */
 .btn-retry {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     width: 100%;
-    padding: 18px 28px 20px;
-    font-family: var(--font-display);
-    font-size: 26px;
-    font-weight: 400;
-    color: #FFF6E8;
-    background: var(--accent-coral);
+    padding: 18px;
+    font-family: inherit;
+    font-size: 20px;
+    font-weight: 800;
+    color: white;
+    background: white;
+    color: var(--bg-gameover);
     border: none;
     border-radius: var(--radius-pill);
     cursor: pointer;
-    box-shadow: var(--shadow-cta);
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
-    text-transform: none;
-    letter-spacing: 0;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-transform: uppercase;
 }
 
 .btn-retry:active {
-    transform: translateY(4px);
-    box-shadow:
-        inset 0 2px 0 var(--accent-coral-hi),
-        inset 0 -2px 0 var(--accent-coral-dk),
-        0 2px 0 rgba(200, 90, 72, 0.35),
-        0 4px 10px rgba(200, 90, 72, 0.18);
+    transform: scale(0.96);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.btn-retry svg {
-    color: #FFF6E8;
-}
-
-/* Secondary "Home" button — cream-filled outlined pill, purple text */
 .btn-home {
     display: flex;
     align-items: center;
@@ -1239,24 +1156,20 @@ body {
     width: 100%;
     padding: 16px;
     font-family: inherit;
-    font-size: var(--fs-button);
-    font-weight: var(--fw-strong);
-    color: var(--ink-deep);
-    background: var(--surface-card);
-    border: 2px solid var(--ink-deep);
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
     border-radius: var(--radius-pill);
     cursor: pointer;
-    transition: background 0.15s ease, transform 0.08s ease, box-shadow 0.08s ease;
-    text-transform: none;
-    box-shadow: var(--float-sm);
+    transition: background 0.2s;
+    text-transform: uppercase;
 }
 
 .btn-home:active {
-    background: rgba(63, 36, 96, 0.06);
-    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.25);
 }
-
-.btn-home svg { color: var(--ink-deep); }
 
 .new-high-score {
     position: absolute;
@@ -1284,32 +1197,29 @@ body {
     font-family: inherit;
     font-size: 18px;
     font-weight: 700;
-    text-transform: none;
-    letter-spacing: 0;
     border: none;
     border-radius: var(--radius-pill);
     cursor: pointer;
     transition: var(--transition-fast);
     margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
 }
 
 .btn-primary {
-    background: var(--accent-coral);
-    color: #FFF6E8;
-    box-shadow: var(--shadow-cta);
-    font-weight: var(--fw-display);
+    background: var(--accent-green);
+    color: white;
+    box-shadow: 0 4px 16px rgba(45, 106, 79, 0.3);
 }
 
 .btn-primary:active {
-    transform: translateY(3px);
+    transform: scale(0.96);
 }
 
 .btn-secondary {
-    background: var(--surface-card);
-    border: 2px solid var(--ink-deep);
-    color: var(--ink-deep);
-    font-weight: var(--fw-strong);
-    box-shadow: var(--float-sm);
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #2C2C2C;
 }
 
 .settings-link-btn {
@@ -1321,8 +1231,7 @@ body {
 }
 
 .btn-secondary:active {
-    background: rgba(63, 36, 96, 0.06);
-    transform: scale(0.98);
+    background: rgba(255, 255, 255, 0.05);
 }
 
 /* =====================================================
@@ -1439,10 +1348,13 @@ body {
     font-family: var(--font-game);
     font-size: var(--fs-title);
     font-weight: var(--fw-display);
-    letter-spacing: -1px;
+    letter-spacing: var(--tracking-title);
+    -webkit-text-stroke: 3px rgba(0, 0, 0, 0.22);
+    paint-order: stroke fill;
     line-height: 1;
     margin-bottom: 40px;
-    color: var(--ink-deep);
+    color: white;
+    -webkit-text-fill-color: white;
     opacity: 0;
     transform: scale(0.8);
     animation: titleIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
@@ -1501,29 +1413,37 @@ body {
    ===================================================== */
 @media (max-height: 680px) {
     .game-container {
-        gap: 8px;
-        padding: 8px;
+        gap: 10px;
+        padding: 10px;
     }
 
     :root {
-        --board-size: min(90vw, 360px);
+        --board-size: min(88vw, 340px);
     }
 
     .piece-tray {
-        padding: 10px 8px 14px;
+        padding: 10px 8px;
+    }
+
+    .piece-tray-header {
+        margin-bottom: 8px;
+    }
+
+    .tray-help {
+        font-size: 12px;
     }
 
     .piece-slots {
-        min-height: 100px;
+        min-height: 60px;
     }
 
     .piece-cell {
-        width: 30px;
-        height: 30px;
+        width: 20px;
+        height: 20px;
     }
 
     .score-value {
-        font-size: 28px;
+        font-size: 36px;
     }
 
     .start-content {
@@ -1532,18 +1452,22 @@ body {
     }
 
     .start-title {
-        font-size: 64px;
+        font-size: 44px;
+    }
+
+    .start-subtitle {
+        font-size: 14px;
     }
 }
 
 @media (min-width: 500px) and (min-height: 800px) {
     :root {
-        --board-size: 440px;
+        --board-size: 380px;
     }
 
     .piece-cell {
-        width: 42px;
-        height: 42px;
+        width: 20px;
+        height: 20px;
     }
 }
 
@@ -1564,12 +1488,12 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
+    background: var(--bg-start);
 }
 
-/* Let body cream show through — the game container is just a layout wrapper */
+/* Ensure game screen covers everything including safe areas */
 .game-container {
-    background: transparent;
+    background: var(--bg-game);
 }
 
 .start-content {
@@ -1577,64 +1501,104 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 20px 24px;
+    padding: 32px 26px;
     width: 100%;
-    max-width: 430px;
+    max-width: 396px;
     height: 100%;
     max-height: 100dvh;
-    padding-top: max(40px, env(safe-area-inset-top, 40px));
-    padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
-    gap: 14px;
+    padding-top: max(80px, 12vh);
+    padding-bottom: max(60px, 10vh);
+    gap: 24px;
 }
 
-.start-bottom {
-    gap: 12px;
-}
-
-/* Start console — on the cream-on-cream mockup this is just the title crown
-   over open background, no card. Kill the glass panel. */
+/* Liquid Glass console — hero element centre-screen on the start view */
 .start-console {
     width: 100%;
-    padding: 0;
+    padding: 40px 28px 36px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 16px;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    box-shadow: none;
+    gap: 14px;
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: var(--glass-border);
+    border-radius: var(--radius-card-lg);
+    box-shadow:
+        var(--glass-inner-hi),
+        var(--glass-outer-shadow);
     margin-top: auto;
     margin-bottom: auto;
     position: relative;
+    overflow: hidden;
+    isolation: isolate;
 }
 
-/* Glass specular-shine disabled in v3 — cream surfaces are opaque, no glass */
+/* Specular highlight — the "light catching the top of the glass" effect that
+   distinguishes real Liquid Glass from plain glassmorphism. */
 .start-console::before,
 .score-display::before,
 .piece-tray::before,
 .modal-content::before {
-    display: none;
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--glass-shine);
+    pointer-events: none;
+    z-index: 0;
+    display: block;
+}
+
+/* Ensure all children sit above the shine layer */
+.start-console > *,
+.score-display > *,
+.piece-tray > *,
+.modal-content > * {
+    position: relative;
+    z-index: 1;
 }
 
 .start-tagline {
-    display: none;
+    font-family: var(--font-game);
+    font-size: 15px;
+    font-weight: var(--fw-label);
+    color: rgba(255, 255, 255, 0.92);
+    text-align: center;
+    letter-spacing: 0.2px;
+    margin-top: 4px;
+    max-width: 260px;
+    line-height: 1.3;
 }
 
 .start-kicker {
-    display: none;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
 }
 
-/* Custom SVG logo (inline in HTML) — replaces the old text-rendered title.
-   The SVG contains crown, sparkles, and the 3D extruded "Block Royale"
-   wordmark. We just size it and handle the reveal animation. */
-.start-logo {
-    display: block;
-    width: min(78vw, 340px);
-    height: auto;
-    margin: 0 auto;
+.start-title {
+    font-family: var(--font-game);
+    font-size: var(--fs-title);
+    font-weight: var(--fw-display);
+    line-height: 1;
+    text-align: center;
+    text-transform: none;
+    letter-spacing: var(--tracking-title);
+    -webkit-text-stroke: 3px rgba(0, 0, 0, 0.22);
+    paint-order: stroke fill;
+    color: white;
+    -webkit-text-fill-color: white;
+    background: none;
+    filter: none;
     opacity: 0;
-    transform: scale(0.75) translateY(16px);
+    transform: scale(0.7) translateY(20px);
     animation: title-reveal 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s forwards;
 }
 
@@ -1680,140 +1644,69 @@ body {
     }
 }
 
-/* Mockup has no best-score pill on the start screen — hide */
-.start-best-score { display: none; }
-
-/* ======================================================
-   START-SCREEN BOARD PREVIEW — decorative, not interactive
-   ====================================================== */
-.start-board-preview {
-    width: min(84vw, 320px);
-    flex: 0 1 auto;
-    margin: 0 auto;
-    pointer-events: none;
-}
-
-.preview-frame {
-    background: var(--surface-tray);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--radius-card);
-    padding: 10px;
-    box-shadow:
-        var(--shadow-tray-inset),
-        var(--float-lg);
-}
-
-.preview-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    grid-template-rows: repeat(8, 1fr);
-    gap: 4px;
-    aspect-ratio: 1 / 1;
-    width: 100%;
-}
-
-.preview-grid .cell {
-    aspect-ratio: 1 / 1;
+.start-best-score {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .start-buttons-row {
     display: flex;
-    align-items: stretch;
+    align-items: center;
     justify-content: center;
-    gap: 12px;
-    width: 84%;
-    max-width: 320px;
-    margin: 0 auto;
+    gap: 16px;
+    width: 100%;
 }
 
-/* Coral Play pill — hero CTA. Uses display font. */
 .btn-play {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    padding: 16px 0 18px;
-    font-family: var(--font-display);
-    font-size: 26px;
-    font-weight: 400;
-    color: #FFF6E8;
-    background: var(--accent-coral);
+    gap: 8px;
+    padding: 18px 40px;
+    font-family: inherit;
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--accent-green);
+    background: white;
     border: none;
     border-radius: var(--radius-pill);
     cursor: pointer;
-    box-shadow: var(--shadow-cta);
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
-    text-transform: none;
-    letter-spacing: 0;
-    flex: 0 0 auto;
-    width: 84%;
-    max-width: 320px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s, box-shadow 0.1s;
+    text-transform: uppercase;
+    letter-spacing: 3px;
 }
-
-.btn-play .icon { display: none; }
 
 .btn-play:active {
-    transform: translateY(4px);
-    box-shadow:
-        inset 0 2px 0 var(--accent-coral-hi),
-        inset 0 -2px 0 var(--accent-coral-dk),
-        0 2px 0 rgba(200, 90, 72, 0.35),
-        0 4px 10px rgba(200, 90, 72, 0.18);
+    transform: scale(0.96);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
-/* Pastel pill side buttons — Settings (mint) + Leaderboard (lavender) */
 .btn-start-icon {
     display: flex;
     align-items: center;
     justify-content: center;
     width: 52px;
     height: 52px;
-    border-radius: 26px;
-    flex: 1 1 0;
-    min-width: 0;
-    width: auto;
-    height: auto;
-    padding: 14px 16px 18px;
-    background: var(--accent-mint);
-    border: 1px solid rgba(140, 95, 50, 0.10);
-    color: var(--ink-deep);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
     cursor: pointer;
-    transition: transform 0.08s ease, box-shadow 0.08s ease;
-    font-family: var(--font-game);
-    font-size: 14px;
-    font-weight: var(--fw-strong);
-    /* Raised-cube depth: inner top highlight, inner bottom shade, external side wall, soft drop. */
-    box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.55),
-        inset 0 -3px 0 rgba(0, 0, 0, 0.06),
-        0 5px 0 var(--accent-mint-dk),
-        0 10px 18px rgba(120, 60, 30, 0.18);
-    flex-direction: column;
-    gap: 6px;
-}
-
-.btn-start-icon .icon svg {
-    color: var(--ink-deep);
-    width: 26px;
-    height: 26px;
-}
-
-#startLeaderboardBtn {
-    background: var(--accent-lavender);
-    box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.55),
-        inset 0 -3px 0 rgba(0, 0, 0, 0.06),
-        0 5px 0 var(--accent-lavender-dk),
-        0 10px 18px rgba(120, 60, 30, 0.18);
+    transition: var(--transition-fast);
 }
 
 .btn-start-icon:active {
-    transform: translateY(4px);
-    box-shadow:
-        inset 0 2px 0 rgba(255, 255, 255, 0.45),
-        inset 0 -2px 0 rgba(0, 0, 0, 0.05),
-        0 1px 0 var(--accent-mint-dk),
-        0 4px 8px rgba(120, 60, 30, 0.14);
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.92);
 }
 
 .privacy-modal {

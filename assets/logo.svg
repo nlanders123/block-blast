@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 360" role="img" aria-label="Block Royale" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <!-- Shine gradient — top lighter, bottom darker purple -->
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#9E76D0"/>
+      <stop offset="18%"  stop-color="#7E52AE"/>
+      <stop offset="55%"  stop-color="#4A2A72"/>
+      <stop offset="100%" stop-color="#2F1A4A"/>
+    </linearGradient>
+
+    <!-- Crown gold gradient -->
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FAD966"/>
+      <stop offset="55%"  stop-color="#F5C94F"/>
+      <stop offset="100%" stop-color="#D9A726"/>
+    </linearGradient>
+
+    <!-- Soft float shadow under the whole logo -->
+    <filter id="softdrop" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="9" flood-color="#3A1A5C" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- One letter-shape reused for extrusion + shine -->
+    <!-- "Block" line -->
+    <g id="row1">
+      <text x="210" y="148"
+            text-anchor="middle"
+            font-family="'Bagel Fat One', 'Sigmar', serif"
+            font-size="120"
+            letter-spacing="2"
+            paint-order="stroke fill"
+            stroke-linejoin="round"
+            stroke-linecap="round">Block</text>
+    </g>
+    <!-- "Royale" line -->
+    <g id="row2">
+      <text x="210" y="278"
+            text-anchor="middle"
+            font-family="'Bagel Fat One', 'Sigmar', serif"
+            font-size="120"
+            letter-spacing="2"
+            paint-order="stroke fill"
+            stroke-linejoin="round"
+            stroke-linecap="round">Royale</text>
+    </g>
+  </defs>
+
+  <!-- CROWN (drawn above the word) -->
+  <g transform="translate(210 0)" filter="url(#softdrop)">
+    <!-- Main crown body -->
+    <path d="M -38 44
+             L -18 68
+             L 0 30
+             L 18 68
+             L 38 44
+             L 38 82
+             Q 38 90 30 90
+             L -30 90
+             Q -38 90 -38 82
+             Z"
+          fill="url(#gold)"
+          stroke="#A67D16"
+          stroke-width="3"
+          stroke-linejoin="round"/>
+    <!-- Ball finials on peaks -->
+    <circle cx="-38" cy="44" r="6" fill="url(#gold)" stroke="#A67D16" stroke-width="2.5"/>
+    <circle cx="0"   cy="30" r="7" fill="url(#gold)" stroke="#A67D16" stroke-width="2.5"/>
+    <circle cx="38"  cy="44" r="6" fill="url(#gold)" stroke="#A67D16" stroke-width="2.5"/>
+    <!-- Central gem -->
+    <rect x="-7" y="58" width="14" height="14" rx="3" fill="#3A2352" stroke="#A67D16" stroke-width="2"/>
+    <!-- Gem highlight -->
+    <rect x="-4" y="60" width="4" height="4" rx="1" fill="#8E66C2"/>
+  </g>
+
+  <!-- Sparkles around logo -->
+  <g fill="#F5C94F" opacity="0.85">
+    <path d="M 60 80 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 l 10 -4 z"/>
+    <path d="M 370 100 l 3 8 l 8 3 l -8 3 l -3 8 l -3 -8 l -8 -3 l 8 -3 z"/>
+    <path d="M 370 210 l 3 8 l 8 3 l -8 3 l -3 8 l -3 -8 l -8 -3 l 8 -3 z"/>
+  </g>
+  <g fill="#EC7560" opacity="0.75">
+    <circle cx="42" cy="220" r="5"/>
+  </g>
+  <g fill="#A8D67F" opacity="0.75">
+    <circle cx="386" cy="300" r="4"/>
+  </g>
+  <g fill="#F5C94F" opacity="0.75">
+    <circle cx="56" cy="304" r="3.5"/>
+  </g>
+
+  <!-- 3D EXTRUSION STACK — 8 layers, progressively darker, each offset +1px down -->
+  <g filter="url(#softdrop)">
+    <!-- Back-most (deepest extrusion) -->
+    <g transform="translate(0 8)"><use href="#row1" fill="#1A0D23" stroke="#1A0D23" stroke-width="10"/><use href="#row2" fill="#1A0D23" stroke="#1A0D23" stroke-width="10"/></g>
+    <g transform="translate(0 7)"><use href="#row1" fill="#1D0F28" stroke="#1D0F28" stroke-width="10"/><use href="#row2" fill="#1D0F28" stroke="#1D0F28" stroke-width="10"/></g>
+    <g transform="translate(0 6)"><use href="#row1" fill="#20112C" stroke="#20112C" stroke-width="10"/><use href="#row2" fill="#20112C" stroke="#20112C" stroke-width="10"/></g>
+    <g transform="translate(0 5)"><use href="#row1" fill="#231333" stroke="#231333" stroke-width="10"/><use href="#row2" fill="#231333" stroke="#231333" stroke-width="10"/></g>
+    <g transform="translate(0 4)"><use href="#row1" fill="#261538" stroke="#261538" stroke-width="10"/><use href="#row2" fill="#261538" stroke="#261538" stroke-width="10"/></g>
+    <g transform="translate(0 3)"><use href="#row1" fill="#29173D" stroke="#29173D" stroke-width="10"/><use href="#row2" fill="#29173D" stroke="#29173D" stroke-width="10"/></g>
+    <g transform="translate(0 2)"><use href="#row1" fill="#2C1940" stroke="#2C1940" stroke-width="10"/><use href="#row2" fill="#2C1940" stroke="#2C1940" stroke-width="10"/></g>
+    <g transform="translate(0 1)"><use href="#row1" fill="#2F1B45" stroke="#2F1B45" stroke-width="10"/><use href="#row2" fill="#2F1B45" stroke="#2F1B45" stroke-width="10"/></g>
+
+    <!-- Top face: gradient-filled, extra-thick stroke = inflated bubble look -->
+    <use href="#row1" fill="url(#shine)" stroke="url(#shine)" stroke-width="10"/>
+    <use href="#row2" fill="url(#shine)" stroke="url(#shine)" stroke-width="10"/>
+  </g>
+</svg>

@@ -211,13 +211,13 @@ class BlockRoyale {
         // Colors with hex values for particles
         this.colors = ['purple', 'cyan', 'orange', 'blue', 'red', 'green', 'yellow'];
         this.colorHex = {
-            purple: '#a855f7',
-            cyan: '#2dd4bf',
-            orange: '#fb923c',
-            blue: '#3b82f6',
-            red: '#f43f5e',
-            green: '#10b981',
-            yellow: '#facc15'
+            purple: '#B593D8',
+            cyan:   '#8DD4B6',
+            orange: '#F09568',
+            blue:   '#8DBCEA',
+            red:    '#F08978',
+            green:  '#A8D67F',
+            yellow: '#F2C44E'
         };
 
         // Sound Manager
@@ -1234,7 +1234,7 @@ class BlockRoyale {
         const m1 = document.querySelector('meta[name="theme-color"]');
         if (m1) m1.remove();
         const m1n = document.createElement('meta');
-        m1n.name = 'theme-color'; m1n.content = '#E8765A';
+        m1n.name = 'theme-color'; m1n.content = '#F3E3C5';
         document.head.appendChild(m1n);
     }
 
@@ -1311,7 +1311,7 @@ class BlockRoyale {
         const m2 = document.querySelector('meta[name="theme-color"]');
         if (m2) m2.remove();
         const m2n = document.createElement('meta');
-        m2n.name = 'theme-color'; m2n.content = '#F5F3F0';
+        m2n.name = 'theme-color'; m2n.content = '#F3E3C5';
         document.head.appendChild(m2n);
 
         this.createBoard();
@@ -1348,17 +1348,13 @@ document.addEventListener('DOMContentLoaded', () => {
         root.classList.remove('screen-game', 'screen-gameover');
         cosmicBg.classList.remove('bg-game', 'bg-gameover');
 
-        let color;
+        let color = '#F3E3C5';
         if (screen === 'game') {
             root.classList.add('screen-game');
             cosmicBg.classList.add('bg-game');
-            color = '#F5F3F0';
         } else if (screen === 'gameover') {
             root.classList.add('screen-gameover');
             cosmicBg.classList.add('bg-gameover');
-            color = '#E8765A';
-        } else {
-            color = '#2D6A4F';
         }
 
         // Force Safari to update browser chrome by removing and re-inserting theme-color

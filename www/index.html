@@ -8,12 +8,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#2D6A4F">
-    <meta name="description" content="Block Royale - A neon block puzzle game">
+    <meta name="theme-color" content="#F3E3C5">
+    <meta name="description" content="Block Royale - A cozy block puzzle game">
     <title>Block Royale</title>
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css?v=25">
+    <link rel="stylesheet" href="style.css?v=35">
 </head>
 
 <body>
@@ -34,20 +34,150 @@
     <div class="start-screen" id="startScreen">
         <div class="start-content">
             <div class="start-console">
-                <h1 class="start-title">Block Royale</h1>
-                <p class="start-tagline">Drop blocks. Clear lines. Chase your best.</p>
+                <svg class="start-logo" viewBox="0 0 420 360" role="img" aria-label="Block Royale" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="logo-shine" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stop-color="#9E76D0"/>
+                            <stop offset="18%"  stop-color="#7E52AE"/>
+                            <stop offset="55%"  stop-color="#4A2A72"/>
+                            <stop offset="100%" stop-color="#2F1A4A"/>
+                        </linearGradient>
+                        <linearGradient id="logo-gold" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%"   stop-color="#FAD966"/>
+                            <stop offset="55%"  stop-color="#F5C94F"/>
+                            <stop offset="100%" stop-color="#D9A726"/>
+                        </linearGradient>
+                        <filter id="logo-drop" x="-20%" y="-20%" width="140%" height="140%">
+                            <feDropShadow dx="0" dy="14" stdDeviation="9" flood-color="#3A1A5C" flood-opacity="0.35"/>
+                        </filter>
+                        <g id="lr-row1">
+                            <text x="210" y="148" text-anchor="middle"
+                                  font-family="'Bagel Fat One', 'Sigmar', serif"
+                                  font-size="120" letter-spacing="2"
+                                  paint-order="stroke fill"
+                                  stroke-linejoin="round" stroke-linecap="round">Block</text>
+                        </g>
+                        <g id="lr-row2">
+                            <text x="210" y="278" text-anchor="middle"
+                                  font-family="'Bagel Fat One', 'Sigmar', serif"
+                                  font-size="120" letter-spacing="2"
+                                  paint-order="stroke fill"
+                                  stroke-linejoin="round" stroke-linecap="round">Royale</text>
+                        </g>
+                    </defs>
+
+                    <!-- Crown -->
+                    <g transform="translate(210 0)" filter="url(#logo-drop)">
+                        <path d="M -38 44 L -18 68 L 0 30 L 18 68 L 38 44 L 38 82 Q 38 90 30 90 L -30 90 Q -38 90 -38 82 Z"
+                              fill="url(#logo-gold)" stroke="#A67D16" stroke-width="3" stroke-linejoin="round"/>
+                        <circle cx="-38" cy="44" r="6" fill="url(#logo-gold)" stroke="#A67D16" stroke-width="2.5"/>
+                        <circle cx="0"   cy="30" r="7" fill="url(#logo-gold)" stroke="#A67D16" stroke-width="2.5"/>
+                        <circle cx="38"  cy="44" r="6" fill="url(#logo-gold)" stroke="#A67D16" stroke-width="2.5"/>
+                        <rect x="-7" y="58" width="14" height="14" rx="3" fill="#3A2352" stroke="#A67D16" stroke-width="2"/>
+                        <rect x="-4" y="60" width="4" height="4" rx="1" fill="#8E66C2"/>
+                    </g>
+
+                    <!-- Sparkles -->
+                    <g fill="#F5C94F" opacity="0.85">
+                        <path d="M 60 80 l 4 10 l 10 4 l -10 4 l -4 10 l -4 -10 l -10 -4 l 10 -4 z"/>
+                        <path d="M 370 100 l 3 8 l 8 3 l -8 3 l -3 8 l -3 -8 l -8 -3 l 8 -3 z"/>
+                        <path d="M 370 210 l 3 8 l 8 3 l -8 3 l -3 8 l -3 -8 l -8 -3 l 8 -3 z"/>
+                    </g>
+                    <circle cx="42"  cy="220" r="5"   fill="#EC7560" opacity="0.75"/>
+                    <circle cx="386" cy="300" r="4"   fill="#A8D67F" opacity="0.75"/>
+                    <circle cx="56"  cy="304" r="3.5" fill="#F5C94F" opacity="0.75"/>
+
+                    <!-- 3D extrusion stack: 8 solid layers below the top, each +1px deeper & darker -->
+                    <g filter="url(#logo-drop)">
+                        <g transform="translate(0 8)"><use href="#lr-row1" fill="#1A0D23" stroke="#1A0D23" stroke-width="10"/><use href="#lr-row2" fill="#1A0D23" stroke="#1A0D23" stroke-width="10"/></g>
+                        <g transform="translate(0 7)"><use href="#lr-row1" fill="#1D0F28" stroke="#1D0F28" stroke-width="10"/><use href="#lr-row2" fill="#1D0F28" stroke="#1D0F28" stroke-width="10"/></g>
+                        <g transform="translate(0 6)"><use href="#lr-row1" fill="#20112C" stroke="#20112C" stroke-width="10"/><use href="#lr-row2" fill="#20112C" stroke="#20112C" stroke-width="10"/></g>
+                        <g transform="translate(0 5)"><use href="#lr-row1" fill="#231333" stroke="#231333" stroke-width="10"/><use href="#lr-row2" fill="#231333" stroke="#231333" stroke-width="10"/></g>
+                        <g transform="translate(0 4)"><use href="#lr-row1" fill="#261538" stroke="#261538" stroke-width="10"/><use href="#lr-row2" fill="#261538" stroke="#261538" stroke-width="10"/></g>
+                        <g transform="translate(0 3)"><use href="#lr-row1" fill="#29173D" stroke="#29173D" stroke-width="10"/><use href="#lr-row2" fill="#29173D" stroke="#29173D" stroke-width="10"/></g>
+                        <g transform="translate(0 2)"><use href="#lr-row1" fill="#2C1940" stroke="#2C1940" stroke-width="10"/><use href="#lr-row2" fill="#2C1940" stroke="#2C1940" stroke-width="10"/></g>
+                        <g transform="translate(0 1)"><use href="#lr-row1" fill="#2F1B45" stroke="#2F1B45" stroke-width="10"/><use href="#lr-row2" fill="#2F1B45" stroke="#2F1B45" stroke-width="10"/></g>
+                        <!-- Top face: gradient shine + thick stroke = inflated bubble -->
+                        <use href="#lr-row1" fill="url(#logo-shine)" stroke="url(#logo-shine)" stroke-width="10"/>
+                        <use href="#lr-row2" fill="url(#logo-shine)" stroke="url(#logo-shine)" stroke-width="10"/>
+                    </g>
+                </svg>
+            </div>
+            <!-- Decorative board preview (static, matches mockup 1) -->
+            <div class="start-board-preview" aria-hidden="true">
+                <div class="preview-frame">
+                    <div class="preview-grid">
+                        <!-- Row 0 -->
+                        <div class="cell filled color-blue"></div>
+                        <div class="cell filled color-blue"></div>
+                        <div class="cell filled color-blue"></div>
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-green"></div>
+                        <div class="cell filled color-green"></div>
+                        <!-- Row 1 -->
+                        <div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell filled color-yellow"></div>
+                        <div class="cell filled color-yellow"></div>
+                        <div class="cell"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell"></div>
+                        <!-- Row 2 -->
+                        <div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell"></div>
+                        <!-- Row 3 -->
+                        <div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell"></div>
+                        <!-- Row 4 -->
+                        <div class="cell filled color-green"></div>
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <div class="cell"></div><div class="cell"></div>
+                        <div class="cell filled color-yellow"></div>
+                        <div class="cell filled color-yellow"></div>
+                        <!-- Row 5 -->
+                        <div class="cell filled color-green"></div>
+                        <div class="cell filled color-green"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell"></div>
+                        <div class="cell filled color-yellow"></div>
+                        <div class="cell"></div>
+                        <!-- Row 6 -->
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell filled color-purple"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell filled color-red"></div>
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <!-- Row 7 -->
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+                        <div class="cell"></div><div class="cell"></div>
+                    </div>
+                </div>
             </div>
             <div class="start-bottom">
+                <button class="btn-play" id="playBtn">
+                    <span class="icon" style="color: inherit;"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" stroke="none"><path d="M8 5.14v14.72a1 1 0 001.5.86l11.5-7.36a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z"/></svg></span>
+                    Play
+                </button>
                 <div class="start-buttons-row">
-                    <button class="btn-start-icon" id="startLeaderboardBtn" aria-label="Scores">
-                        <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="8" width="5" height="13" rx="1"/></svg></span>
-                    </button>
-                    <button class="btn-play" id="playBtn">
-                        <span class="icon" style="color: inherit;"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" stroke="none"><path d="M8 5.14v14.72a1 1 0 001.5.86l11.5-7.36a1 1 0 000-1.72L9.5 4.28A1 1 0 008 5.14z"/></svg></span>
-                        PLAY
-                    </button>
-                    <button class="btn-start-icon" id="startSettingsBtn" aria-label="Settings">
+                    <button class="btn-start-icon" id="startSettingsBtn">
                         <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 00-2 2v.18a2 2 0 01-1 1.73l-.43.25a2 2 0 01-2 0l-.15-.08a2 2 0 00-2.73.73l-.22.38a2 2 0 00.73 2.73l.15.1a2 2 0 011 1.72v.51a2 2 0 01-1 1.74l-.15.09a2 2 0 00-.73 2.73l.22.38a2 2 0 002.73.73l.15-.08a2 2 0 012 0l.43.25a2 2 0 011 1.73V20a2 2 0 002 2h.44a2 2 0 002-2v-.18a2 2 0 011-1.73l.43-.25a2 2 0 012 0l.15.08a2 2 0 002.73-.73l.22-.39a2 2 0 00-.73-2.73l-.15-.08a2 2 0 01-1-1.74v-.5a2 2 0 011-1.74l.15-.09a2 2 0 00.73-2.73l-.22-.38a2 2 0 00-2.73-.73l-.15.08a2 2 0 01-2 0l-.43-.25a2 2 0 01-1-1.73V4a2 2 0 00-2-2z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                        <span>Settings</span>
+                    </button>
+                    <button class="btn-start-icon" id="startLeaderboardBtn">
+                        <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="5" height="9" rx="1"/><rect x="9.5" y="4" width="5" height="17" rx="1"/><rect x="16" y="8" width="5" height="13" rx="1"/></svg></span>
+                        <span>Leaderboard</span>
                     </button>
                 </div>
                 <div class="start-best-score" id="startBestScore">
@@ -68,10 +198,10 @@
             <div class="score-display">
                 <span class="score-label">SCORE</span>
                 <span class="score-value" id="scoreValue">0</span>
-                <div class="high-score" id="highScoreDisplay">
-                    <span class="high-score-label">BEST</span>
-                    <span class="high-score-value" id="highScoreValue">0</span>
-                </div>
+            </div>
+            <div class="high-score" id="highScoreDisplay">
+                <span class="high-score-label">Best</span>
+                <span class="high-score-value" id="highScoreValue">0</span>
             </div>
 
         </header>
@@ -106,7 +236,7 @@
                     <span class="icon" style="color: #facc15;"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.27 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span>
                 </div>
 
-                <h2 class="modal-title neon-pink">GAME<br>OVER</h2>
+                <h2 class="modal-title neon-pink">Nice run!</h2>
 
                 <div class="final-score-container">
                     <p class="score-label-small">FINAL SCORE</p>
@@ -114,19 +244,18 @@
                 </div>
 
                 <div class="best-score-pill">
-                    <span class="icon" style="color: #9ca3af;"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9A6 6 0 0018 9V4H6V9z"/><path d="M6 5H4a1 1 0 00-1 1v1.5A3.5 3.5 0 006.5 11H7"/><path d="M18 5h2a1 1 0 011 1v1.5A3.5 3.5 0 0117.5 11H17"/><line x1="12" y1="15" x2="12" y2="18"/><path d="M8 21h8"/><path d="M8 21l1-3h6l1 3"/></svg></span>
-                    <span>BEST: <span id="modalHighScore">0</span></span>
+                    <span>Best <span id="modalHighScore">0</span></span>
                 </div>
 
                 <div class="modal-buttons">
                     <button class="btn-retry" id="restartBtn">
                         <span class="icon" style="color: #022c22;"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 105.64-11.36L1 10"/></svg></span>
-                        RETRY
+                        Retry
                     </button>
 
                     <button class="btn-home" id="homeBtn">
                         <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 001 1h4v-5h4v5h4a1 1 0 001-1V9.5"/></svg></span>
-                        HOME
+                        Home
                     </button>
                 </div>
             </div>
@@ -209,7 +338,7 @@
             </button>
             <button class="btn-secondary settings-link-btn" id="privacyPolicyBtn">
                 <span class="icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 4v5c0 4.5-2.9 7.8-7 9-4.1-1.2-7-4.5-7-9V7l7-4z"/><path d="M9.5 12.5l1.8 1.8 3.2-4.3"/></svg></span>
-                Privacy Policy
+                Privacy policy
             </button>
             <button class="btn-secondary" id="closeSettingsBtn" style="margin-top: 12px;">Close</button>
         </div>
@@ -249,9 +378,9 @@
 
     <!-- Line Clear Effects Container -->
     <div class="effects-container" id="effectsContainer"></div>
-    <script src="icons.js?v=25"></script>
-    <script src="game-logic.js?v=25"></script>
-    <script src="game.js?v=25"></script>
+    <script src="icons.js?v=30"></script>
+    <script src="game-logic.js?v=30"></script>
+    <script src="game.js?v=30"></script>
 </body>
 
 </html>
